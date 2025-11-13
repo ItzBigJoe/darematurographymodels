@@ -1,0 +1,17 @@
+<div class="alert alert-info mt-4">
+  <h5 class="fw-bold">Results Summary</h5>
+  <p><strong>Observed Lustrum:</strong> {{ result.Observed.a_ohm }}</p>
+  <p><strong>Observed Decade:</strong> {{ result.Observed.b_ohm }}</p>
+  <p><strong>Observed Generation:</strong> {{ result.Observed.c_ohm }}</p>
+  <p><strong>Observed Life Stage:</strong> {{ result.Observed.d_ohm }}</p>
+  <p><strong>Observed Human Maturogram:</strong> {{ result.Observed.ohm }}</p>
+  <hr>
+  <p><strong>Predicted Lustrum:</strong> {{ result.Predicted.a_phm }}</p>
+  <p><strong>Predicted Decade:</strong> {{ result.Predicted.b_phm }}</p>
+  <p><strong>Predicted Generation:</strong> {{ result.Predicted.c_phm }}</p>
+  <p><strong>Predicted Life Stage:</strong> {{ result.Predicted.d_phm }}</p>
+  <p><strong>Predicted Human Maturogram:</strong> {{ result.Predicted.phm }}</p>
+  <hr>
+  <p><strong>Percentage Human Maturogram:</strong> {{ result.percentage_hm }}%</p>
+  <p><strong>Maturity Zone:</strong> <span class="badge bg-primary">{{ result.zone }}</span></p>
+</div>

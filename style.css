@@ -1,0 +1,84 @@
+body {
+  background: linear-gradient(135deg, #e0ebff, #f7f9ff);
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+
+h2, h3, h4 {
+  font-weight: 600;
+  color: #1a6cff;
+}
+
+.checklist-form {
+  width: 100%;
+  background: #fff;
+  border-radius: 15px;
+  padding: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  border: 1px solid #dbe3ff;
+}
+
+.table th {
+  background-color: #1a6cff !important;
+  color: #fff !important;
+  font-size: 0.85rem;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 0.8rem;
+  word-break: break-word;
+  text-align: center;
+}
+
+.admin-container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+.table-responsive-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 80vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scale-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.zoom-controls {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  z-index: 999;
+}
+
+.zoom-controls button {
+  margin: 2px 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .checklist-form {
+    font-size: 0.9rem;
+    padding: 0.75rem;
+  }
+  table {
+    font-size: 0.75rem;
+    min-width: 1000px;
+  }
+  th, td {
+    padding: 0.25rem 0.4rem;
+  }
+}
