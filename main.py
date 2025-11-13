@@ -4,9 +4,9 @@ import pandas as pd
 from maturography import MaturographyCalculator
 from datetime import timedelta
 
-app = Flask(__name__)
-app.secret_key = "your_super_secret_key"  # Change this to a secure random key
-app.permanent_session_lifetime = timedelta(minutes=5)
+main = Flask(__name__)
+main.secret_key = "your_super_secret_key"  # Change this to a secure random key
+main.permanent_session_lifetime = timedelta(minutes=5)
 
 # ------------------ DATABASE CONNECTION ------------------
 def get_db_connection():
@@ -258,7 +258,7 @@ checklist_items = [
 
 # ------------------ ROUTES ------------------
 
-@app.route("/")
+@main.route("/")
 def index():
     return render_template("index.html", focus_texts=focus_texts, checklist_items=checklist_items)
 
@@ -266,7 +266,7 @@ def index():
 ADMIN_USERNAME = "Humanmaturogram"
 ADMIN_PASSWORD = "@maturogram2025"
 
-@app.route("/login", methods=["GET", "POST"])
+@main.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         data = request.get_json()
@@ -283,12 +283,12 @@ def login():
 
     return render_template("login.html")
 
-@app.route("/logout")
+@main.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/submit", methods=["POST"])
+@main.route("/submit", methods=["POST"])
 def submit():
     try:
         age_str = request.form.get("age", "").strip()
@@ -334,7 +334,7 @@ def submit():
         return f"<div class='alert alert-danger'>Error: {str(e)}</div>"
 
 
-@app.route("/admin")
+@main.route("/admin")
 def admin():
     if not session.get("admin_logged_in"):
         return redirect(url_for("login"))
@@ -563,7 +563,7 @@ def admin():
 
     return render_template("admin.html", tables=table_html)
 
-@app.route("/download")
+@main.route("/download")
 def download():
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
@@ -576,5 +576,5 @@ def download():
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    main.run(host="0.0.0.0", port=port)
 
