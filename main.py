@@ -6,7 +6,7 @@ from datetime import timedelta
 
 main = Flask(__name__)
 main.secret_key = "your_super_secret_key"  # Change this to a secure random key
-main.permanent_session_lifetime = timedelta(minutes=5)
+main.permanent_session_lifetime = timedelta(minutes=30)
 
 # ------------------ DATABASE CONNECTION ------------------
 def get_db_connection():
@@ -272,14 +272,13 @@ def login():
         data = request.get_json()
         username = data.get("username")
         password = data.get("password")
-        remember = data.get("remember", False)
 
         if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session.permanent = True
             session["admin_logged_in"] = True
-            session.permanent = remember  # keeps session longer if "Remember Me"
             return jsonify({"success": True, "redirect": url_for("admin")})
         else:
-            return jsonify({"success": False, "error": "Invalid credentials"})
+            return jsonify({"success": False, "error": "Wrong username or password."})
 
     return render_template("login.html")
 
@@ -287,6 +286,15 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+def admin_required(func):
+    """Decorator to protect admin routes."""
+    from functools import wraps
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("login"))
+        return func(*args, **kwargs)
+    return wrapper
 
 @main.route("/submit", methods=["POST"])
 def submit():
@@ -335,6 +343,7 @@ def submit():
 
 
 @main.route("/admin")
+@admin_required
 def admin():
     if not session.get("admin_logged_in"):
         return redirect(url_for("login"))
