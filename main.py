@@ -9,16 +9,35 @@ main.secret_key = "your_super_secret_key"  # Change this to a secure random key
 main.permanent_session_lifetime = timedelta(minutes=30)
 
 # ------------------ DATABASE CONNECTION ------------------
+import psycopg2
+import psycopg2.extras
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 def get_db_connection():
-    conn = sqlite3.connect("data.db")
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        port=os.getenv("DB_PORT")
+    )
     return conn
+
+
+
 
 def init_db():
     conn = get_db_connection()
-    conn.execute('''
+    cur = conn.cursor()
+
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS human_maturography_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             age INTEGER,
             fg_motor INTEGER, fg_language INTEGER, fg_interactions INTEGER, fg_emotional INTEGER,
             fg_curiosity INTEGER, fg_self_recognition INTEGER, fg_total INTEGER,
@@ -73,10 +92,13 @@ def init_db():
             predicted_lustrum REAL, predicted_decade REAL, predicted_generation REAL,
             predicted_life_stage REAL, predicted_human_maturogram REAL,
             percentage_hm REAL, maturity_zone TEXT
-        )
+        );
     ''')
+
     conn.commit()
+    cur.close()
     conn.close()
+
 
 init_db()
 
