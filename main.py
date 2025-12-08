@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+
+
 
 def get_db_connection():
     conn = psycopg2.connect(
@@ -325,40 +326,109 @@ def submit():
         if not age_str:
             return "<div class='alert alert-warning'>Age is required.</div>"
         
-        age = int(request.form["age"])
-        # Capture checklist responses
-        checklist_values = [int(request.form.get(f"l{i}_q{j}", 0)) for i in range(1, 25) for j in range(1, 7)]
+        age = int(age_str)
 
-        # Compute lustrum totals
-        grouped_totals = [sum(checklist_values[i:i+6]) for i in range(0, len(checklist_values), 6)]
+        # Capture checklist responses (144 items)
+        checklist_values = [
+            int(request.form.get(f"l{i}_q{j}", 0))
+            for i in range(1, 25)
+            for j in range(1, 7)
+        ]
+
+        # Compute grouped totals per lustrum (24 groups)
+        grouped_totals = [
+            sum(checklist_values[i:i+6]) 
+            for i in range(0, len(checklist_values), 6)
+        ]
 
         # Calculate maturity scores
         calc = MaturographyCalculator(age, grouped_totals)
         result = calc.calculate()
 
-        # Prepare data for insertion
+        # Prepare row data
         insert_data = [age]
+
+        # Append all checklist responses + grouped totals
         for i in range(24):
-            insert_data.extend(checklist_values[i*6:(i+1)*6])
-            insert_data.append(grouped_totals[i])
-        
-        insert_data += [
-            result["Observed"]["a_ohm"], result["Observed"]["b_ohm"], result["Observed"]["c_ohm"], 
-            result["Observed"]["d_ohm"], result["Observed"]["ohm"],  # Observed lustrum equivalents
-            result["Observed"]["ohm"],  # maybe this maps to observed_lustrum?
-            result["Predicted"]["a_phm"], result["Predicted"]["b_phm"], result["Predicted"]["c_phm"], 
-            result["Predicted"]["d_phm"], result["Predicted"]["phm"],  # Predicted equivalents
-            result["percentage_hm"], result["zone"]
-        ]
+            insert_data.extend(checklist_values[i*6:(i+1)*6])  # 6 values
+            insert_data.append(grouped_totals[i])               # total
 
+        # Append Observed OHM
+        insert_data.extend([
+            result["Observed"]["a_ohm"],
+            result["Observed"]["b_ohm"],
+            result["Observed"]["c_ohm"],
+            result["Observed"]["d_ohm"],
+            result["Observed"]["ohm"]
+        ])
 
-        placeholders = ",".join(["?"] * len(insert_data))
+        # Append Predicted PHM
+        insert_data.extend([
+            result["Predicted"]["a_phm"],
+            result["Predicted"]["b_phm"],
+            result["Predicted"]["c_phm"],
+            result["Predicted"]["d_phm"],
+            result["Predicted"]["phm"]
+        ])
+
+        # Percentage maturity + zone
+        insert_data.append(result["percentage_hm"])
+        insert_data.append(result["zone"])
+
+        # -----------------------------------------
+        # 🔥 FIXED: PostgreSQL uses %s placeholders, NOT ?
+        # -----------------------------------------
+
         conn = get_db_connection()
-        conn.execute(f"INSERT INTO human_maturography_records VALUES (NULL, {placeholders})", insert_data)
+        cur = conn.cursor()
+
+        placeholders = ",".join(["%s"] * len(insert_data))
+
+        cur.execute(
+            f"INSERT INTO human_maturography_records ("
+            "age, "
+            + ",".join([
+                # Generate dynamic columns for 24 lustra × 7 columns
+                *(f"fg_{col}" for col in ["motor","language","interactions","emotional","curiosity","self_recognition","total"]),
+                *(f"sa_{col}" for col in ["friendships","rules","empathy","self_regulation","independence","hobbies","total"]),
+                *(f"id_{col}" for col in ["self_awareness","peer_interest","exploration","emotional_challenges","abstract_thinking","physical_changes","total"]),
+                *(f"ir_{col}" for col in ["independence","responsibility","vocational","values","relationships","longterm_planning","total"]),
+                *(f"cr_{col}" for col in ["transition_to_adult","focus_on_career","form_relationship","longterm_goals","manages_finances","explore_identity","total"]),
+                *(f"fa_{col}" for col in ["establish_family","career_advancement","financial_planning","work_life_balance","build_home_env","support_networks","total"]),
+                *(f"st_{col}" for col in ["stability_career","self_refinement","life_goal_adjustment","health_focus","work_life_balance","community_contribution","total"]),
+                *(f"ml_{col}" for col in ["reflect_achievements","adjust_goals","focus_purpose","meaningful_activities","strengthen_relationships","address_challenges","total"]),
+                *(f"er_{col}" for col in ["career_peak","mentorship_roles","children_focus","legacy_investment","community_service","balance_responsibilities","self_reflection","total"]),
+                *(f"sa_{col}" for col in ["nurtures_others","personal_goals","creative_interests","work_life_harmony","future_preparation","share_wisdom","2_total"]),
+                *(f"ws_{col}" for col in ["self_care","life_priority","mentoring_extensive","lifelong_learning","emotional_resilience","financial_planning","total"]),
+                *(f"pr_{col}" for col in ["lifestyle_adjustment","meaningful_activities","health_management","legacy_building","career_transition","retirement","total"]),
+                *(f"lr_{col}" for col in ["community_contribution","document_life","family_connections","reflect_achievements","social_engagement","emotional_stability","total"]),
+                *(f"em_{col}" for col in ["mental_wellbeing","gratitude","life_acceptance","simple_joy","positive_outlook","counsel_others","total"]),
+                *(f"wm_{col}" for col in ["offer_councel","find_peace","foster_resilience","shares_stories","spiritual_pursuits","meaningful_relationship","total"]),
+                *(f"ar_{col}" for col in ["adapts_to_health","strengthen_relationships","pass_on_traditions","life_reflection","resilience_aging","maintain_independence","total"]),
+                *(f"sr_{col}" for col in ["serenity_practices","life_reflection","family_milestones","quiet_pursuits","support_networks","sense_of_purpose","total"]),
+                *(f"lf_{col}" for col in ["storytelling","inspire_future","spiritual_beliefs","family_connections","focus_legacy","accept_assistance","total"]),
+                *(f"co_{col}" for col in ["inner_peace","simplicity","strengthen_bonds","express_gratitude","positive_memories","prioritize_wellbeing","total"]),
+                *(f"rs_{col}" for col in ["final_reflection","preserve_memories","support_systems","spiritual_closure","share_wisdom","end_of_life","total"]),
+                *(f"ex_{col}" for col in ["century_reflection","share_wisdom","family_unity","celebrate_centenarian","mental_engagement","historical_perspective","total"]),
+                *(f"pa_{col}" for col in ["life_stages","dignity","meaningful_connections","daily_comfort","caregivers","memories_solace","total"]),
+                *(f"gl_{col}" for col in ["celebrate_longevity","express_gratitude","foster_peace","appreciate_legacy","share_insights","grateful_mindset","total"]),
+                *(f"fm_{col}" for col in ["accept_life_cycle","pass_wisdom","find_closure","lifetime_reflection","support_system","final_peace","total"]),
+                "observed_lustrum", "observed_decade", "observed_generation", 
+                "observed_life_stage", "observed_human_maturogram",
+                "predicted_lustrum", "predicted_decade", "predicted_generation",
+                "predicted_life_stage", "predicted_human_maturogram",
+                "percentage_hm", "maturity_zone"
+            ]) +
+            ") VALUES (" + placeholders + ")",
+            insert_data
+        )
+
         conn.commit()
+        cur.close()
         conn.close()
 
-        return render_template("result_snippet.html", result=result)
+        # Return HTML result box
+        return render_template("result.html", result=result)
 
     except Exception as e:
         return f"<div class='alert alert-danger'>Error: {str(e)}</div>"
@@ -370,16 +440,18 @@ def admin():
     if not session.get("admin_logged_in"):
         return redirect(url_for("login"))
 
-    conn = sqlite3.connect("data.db")
-    df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
-    conn.close()
+    conn = get_db_connection()
+    try:
+        df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+    finally:
+        conn.close()
 
     if df.empty:
         table_html = "<p class='text-center text-muted'>No records available.</p>"
     else:
         # Build a column mapping for all columns
-        col_mapping = {
-            "id": "S/N",
+        DT_COLUMNS = {
+            "id": "ID",
             "age": "Age",
             # Foundational Growth
             "fg_motor": "Foundational Growth: Demonstrates basic motor skills",
@@ -588,11 +660,104 @@ def admin():
             "percentage_hm": "Percentage Human Maturogram",
             "maturity_zone": "Maturity zone"
         }
+        
+        # Helper to convert a psycopg2 row to dict
+        def row_to_dict(cur, row):
+            return {desc[0]: row[idx] for idx, desc in enumerate(cur.description)} if hasattr(cur, 'description') else dict(row)
 
-        df.rename(columns=col_mapping, inplace=True)
-        table_html = df.to_html(classes='table table-striped table-bordered', index=False, escape=False)
 
-    return render_template("admin.html", tables=table_html)
+        # Admin page (keeps rendering same admin.html)
+        @main.route("/admin")
+        @admin_required
+        def admin():
+            # admin.html will load data via AJAX from /admin_data
+            return render_template("admin.html")
+
+        # Server-side DataTables endpoint
+        @main.route("/admin_data", methods=["GET", "POST"])
+        @admin_required
+        def admin_data():
+            # DataTables uses parameters like draw, start, length, search[value], order...
+            params = request.values
+
+            draw = int(params.get("draw", 1))
+            start = int(params.get("start", 0))
+            length = int(params.get("length", 10))
+            search_value = params.get("search[value]", "").strip()
+
+            # Ordering
+            order_col_index = params.get("order[0][column]")
+            order_col_dir = params.get("order[0][dir]", "asc")
+            order_col = None
+            if order_col_index is not None:
+                try:
+                    order_col_index = int(order_col_index)
+                    # Map index to column name as we send DT_COLUMNS to the client in same order
+                    if 0 <= order_col_index < len(DT_COLUMNS):
+                        order_col = DT_COLUMNS[order_col_index]
+                except:
+                    order_col = None
+
+            # Build base query
+            select_cols = ", ".join(DT_COLUMNS)
+            base_query = f"SELECT {select_cols} FROM human_maturography_records"
+
+            # Count total records
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(1) FROM human_maturography_records")
+            total_records = cur.fetchone()[0]
+
+            # Filtering
+            where_clause = ""
+            values = []
+            if search_value:
+                # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
+                where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
+                sv = f"%{search_value}%"
+                values.extend([sv, sv, sv])
+
+            # Count filtered
+            count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
+            cur.execute(count_query, values)
+            filtered_records = cur.fetchone()[0]
+
+            # Ordering & Pagination
+            order_sql = ""
+            if order_col:
+                # safety: order_col must be valid and from our whitelist
+                order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
+            limit_sql = " LIMIT %s OFFSET %s"
+            values.extend([length, start])
+
+            final_query = base_query + where_clause + order_sql + limit_sql
+
+            cur.execute(final_query, values)
+            rows = cur.fetchall()
+
+            data = []
+            for row in rows:
+                rowd = row_to_dict(cur, row)
+                # Keep order consistent with DT_COLUMNS (so client can render columns easily)
+                data.append([rowd.get(c) for c in DT_COLUMNS])
+
+            # Build response according to DataTables server-side spec
+            response = {
+                "draw": draw,
+                "recordsTotal": total_records,
+                "recordsFiltered": filtered_records,
+                "data": data
+            }
+
+            cur.close()
+            conn.close()
+            return jsonify(response)
+    # Rename dataframe columns for display
+        df_display = df.rename(columns=DT_COLUMNS)
+        table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)
+
+    # Finally, render template with table
+    return render_template("admin.html", table_html=table_html)
 
 @main.route("/download")
 def download():
