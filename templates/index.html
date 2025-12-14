@@ -53,18 +53,121 @@
     <!-- Hide the form until consent is given -->
     <div id="form-wrapper" style="display:none;">
 
+      <form id="maturography-form" method="POST">
 
-    <form id="maturography-form" method="POST">
+        <!-- PAGE 1 -->
+        <div class="form-page" id="page-1">
+          <fieldset class="border p-3 mb-3">
+            <legend class="fw-bold px-2">Socio-demography</legend>
 
-      <!-- PAGE 1 -->
-      <div class="form-page" id="page-1">
-        <div class="mb-3">
-          <label for="age" class="form-label fw-bold">Enter Age:</label>
-          <input type="number" class="form-control" id="age" name="age" min="1" max="120" required>
+            <!-- Age -->
+            <div class="mb-3">
+              <label for="age" class="form-label fw-bold">Age</label>
+              <input type="number" class="form-control" id="age" name="age" min="1" max="120" required>
+            </div>
+
+            <!-- Marital Status -->
+            <div class="mb-3">
+              <label for="marital_status" class="form-label fw-bold">Marital Status</label>
+              <select class="form-select" id="marital_status" name="marital_status" required>
+                <option value="">Select status</option>
+                <option value="Not married">Not married</option>
+                <option value="Married">Married</option>
+                <option value="Divorced">Divorced</option>
+                <option value="Widowed">Widowed</option>
+              </select>
+            </div>
+
+            <!-- Gender -->
+            <div class="mb-3">
+              <label for="gender" class="form-label fw-bold">Gender</label>
+              <select class="form-select" id="gender" name="gender" required>
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+
+            <!-- Occupation -->
+            <div class="mb-3">
+              <label for="occupation" class="form-label fw-bold">Occupation</label>
+              <select class="form-select" id="occupation" name="occupation" required>
+                <option value="">Select occupation</option>
+                <option>Doctor</option>
+                <option>Engineer</option>
+                <option>Lawyer</option>
+                <option>Lecturer</option>
+                <option>Teacher</option>
+                <option>Accountant</option>
+                <option>Architect</option>
+                <option>Software Developer</option>
+                <option>Data Analyst</option>
+                <option>Banker</option>
+                <option>Economist</option>
+                <option>Pharmacist</option>
+                <option>Electrician</option>
+                <option>Plumber</option>
+                <option>Mechanic</option>
+                <option>Welder</option>
+                <option>Carpenter</option>
+                <option>Driver</option>
+                <option>Factory Worker</option>
+                <option>Construction Worker</option>
+                <option>Nurse</option>
+                <option>Caregiver</option>
+                <option>Social Worker</option>
+                <option>Early Childhood Educator</option>
+                <option>Home Health Aide</option>
+                <option>Environmental Scientist</option>
+                <option>Agricultural Extension Officer</option>
+                <option>Renewable Energy Technician</option>
+                <option>Forestry Worker</option>
+                <option>University Professor</option>
+                <option>Medical Consultant</option>
+                <option>Senior Researcher</option>
+                <option>Technician</option>
+                <option>IT Support Specialist</option>
+                <option>Healthcare Assistant</option>
+                <option>Maintenance Officer</option>
+                <option>Miner</option>
+                <option>Oil Rig Worker</option>
+                <option>Driller</option>
+                <option>Trader</option>
+                <option>Farmer</option>
+                <option>Artisan</option>
+                <option>Self-employed</option>
+                <option>Unemployed</option>
+                <option>Student</option>
+                <option>Others</option>
+              </select>
+            </div>
+
+            <!-- Highest Level of Education -->
+            <div class="mb-3">
+              <label for="education" class="form-label fw-bold">Highest Level of Education</label>
+              <select class="form-select" id="education" name="education" required>
+                <option value="">Select level</option>
+                <option>Primary</option>
+                <option>O'Level</option>
+                <option>NCE</option>
+                <option>OND</option>
+                <option>HND</option>
+                <option>BSc.</option>
+                <option>MSc.</option>
+                <option>PhD.</option>
+              </select>
+            </div>
+
+          </fieldset>
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-primary px-5" onclick="nextPage()">Next</button>
+          </div>
         </div>
 
-        <div id="p1-checklists">
-          {% for l in range(0, 4) %}
+        {% set lustra_groups = [(0,4),(4,8),(8,12),(12,16),(16,20),(20,24)] %}
+        {% for grp in lustra_groups %}
+        <div class="form-page" id="page-{{ loop.index + 1 }}" style="display:none;">
+          {% for l in range(grp[0], grp[1]) %}
           <div class="checklist-form mb-4 p-3 border rounded bg-white">
             <h4 class="text-primary text-center mb-3">Lustral Map Checklist (L{{ l+1 }})</h4>
             <div class="table-responsive">
@@ -95,98 +198,23 @@
             </div>
           </div>
           {% endfor %}
-        </div>
 
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-primary px-5" onclick="nextPage()">Next</button>
-        </div>
-      </div>
-
-      <!-- PAGES 2–5 (lustra groups) -->
-      {% set groups = [(4,8),(8,12),(12,16),(16,20)] %}
-      {% for i,grp in enumerate(groups) %}
-      <div class="form-page" id="page-{{ i+2 }}" style="display:none;">
-        {% for l in range(grp[0], grp[1]) %}
-        <div class="checklist-form mb-4 p-3 border rounded bg-white">
-          <h4 class="text-primary text-center mb-3">Lustral Map Checklist (L{{ l+1 }})</h4>
-          <div class="table-responsive">
-            <table class="table table-bordered align-middle">
-              <thead class="table-primary text-center">
-                <tr>
-                  <th>Focus</th>
-                  <th>Checklist for Identification</th>
-                  <th>0</th>
-                  <th>1</th>
-                  <th>2</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for q in range(6) %}
-                <tr>
-                  {% if q == 0 %}
-                  <td rowspan="6" class="text-center align-middle">{{ focus_texts[l] }}</td>
-                  {% endif %}
-                  <td>{{ checklist_items[l*6 + q] }}</td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="0" required></td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="1"></td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="2"></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="text-center mt-3">
+            {% if loop.index > 1 %}
+            <button type="button" class="btn btn-secondary px-5 me-3" onclick="prevPage()">Previous</button>
+            {% endif %}
+            {% if not loop.last %}
+            <button type="button" class="btn btn-primary px-5" onclick="nextPage()">Next</button>
+            {% else %}
+            <button type="button" class="btn btn-success px-5" onclick="submitAll()">Submit</button>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
 
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-secondary px-5 me-3" onclick="prevPage()">Previous</button>
-          <button type="button" class="btn btn-primary px-5" onclick="nextPage()">Next</button>
-        </div>
-      </div>
-      {% endfor %}
+      </form>
 
-      <!-- PAGE 6 (lustra 21–24 + submit) -->
-      <div class="form-page" id="page-6" style="display:none;">
-        {% for l in range(20, 24) %}
-        <div class="checklist-form mb-4 p-3 border rounded bg-white">
-          <h4 class="text-primary text-center mb-3">Lustral Map Checklist (L{{ l+1 }})</h4>
-          <div class="table-responsive">
-            <table class="table table-bordered align-middle">
-              <thead class="table-primary text-center">
-                <tr>
-                  <th>Focus</th>
-                  <th>Checklist for Identification</th>
-                  <th>0</th>
-                  <th>1</th>
-                  <th>2</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for q in range(6) %}
-                <tr>
-                  {% if q == 0 %}
-                  <td rowspan="6" class="text-center align-middle">{{ focus_texts[l] }}</td>
-                  {% endif %}
-                  <td>{{ checklist_items[l*6 + q] }}</td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="0" required></td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="1"></td>
-                  <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="2"></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {% endfor %}
-
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-secondary px-5 me-3" onclick="prevPage()">Previous</button>
-          <button type="button" class="btn btn-success px-5" onclick="submitAll()">Submit</button>
-        </div>
-      </div>
-
-    </form>
-
+    </div>
 
     <div id="result-container" class="mt-4"></div>
 
@@ -233,6 +261,25 @@
       document.getElementById("consent-section").style.display = "none";
       document.getElementById("form-wrapper").style.display = "block";
       window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    let currentPage = 1;
+    function showPage(n) {
+      document.querySelectorAll('.form-page').forEach(p => p.style.display = 'none');
+      document.getElementById(`page-${n}`).style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function nextPage() {
+      if (currentPage < document.querySelectorAll('.form-page').length) {
+        currentPage++;
+        showPage(currentPage);
+      }
+    }
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        showPage(currentPage);
+      }
     }
 
   </script>

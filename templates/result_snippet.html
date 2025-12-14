@@ -1,5 +1,11 @@
 <div class="alert alert-info mt-4">
   <h5 class="fw-bold">Results Summary</h5>
+  <p><strong>Age:</strong> {{ socio.age }}</p>
+  <p><strong>Marital Status:</strong> {{ socio.marital_status or '—' }}</p>
+  <p><strong>Gender:</strong> {{ socio.gender or '—' }}</p>
+  <p><strong>Occupation:</strong> {{ socio.occupation or '—' }}</p>
+  <p><strong>Highest Education:</strong> {{ socio.education or '—' }}</p>
+  <hr>
   <p><strong>Observed Lustrum:</strong> {{ result.Observed.a_ohm }}</p>
   <p><strong>Observed Decade:</strong> {{ result.Observed.b_ohm }}</p>
   <p><strong>Observed Generation:</strong> {{ result.Observed.c_ohm }}</p>

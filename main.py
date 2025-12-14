@@ -40,6 +40,10 @@ def init_db():
         CREATE TABLE IF NOT EXISTS human_maturography_records (
             id SERIAL PRIMARY KEY,
             age INTEGER,
+            marital_status TEXT,
+            gender TEXT,
+            occupation TEXT,
+            education TEXT,
             fg_motor INTEGER, fg_language INTEGER, fg_interactions INTEGER, fg_emotional INTEGER,
             fg_curiosity INTEGER, fg_self_recognition INTEGER, fg_total INTEGER,
             sa_friendships INTEGER, sa_rules INTEGER, sa_empathy INTEGER, sa_self_regulation INTEGER,
@@ -95,6 +99,13 @@ def init_db():
             percentage_hm REAL, maturity_zone TEXT
         );
     ''')
+
+    conn.commit()
+    # Ensure sociodemographic columns exist for older DBs
+    cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS marital_status TEXT;")
+    cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS gender TEXT;")
+    cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS occupation TEXT;")
+    cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS education TEXT;")
 
     conn.commit()
     cur.close()
@@ -327,6 +338,11 @@ def submit():
             return "<div class='alert alert-warning'>Age is required.</div>"
         
         age = int(age_str)
+        # Socio-demographic fields
+        marital_status = request.form.get("marital_status", "").strip()
+        gender = request.form.get("gender", "").strip()
+        occupation = request.form.get("occupation", "").strip()
+        education = request.form.get("education", "").strip()
 
         # Capture checklist responses (144 items)
         checklist_values = [
@@ -345,8 +361,8 @@ def submit():
         calc = MaturographyCalculator(age, grouped_totals)
         result = calc.calculate()
 
-        # Prepare row data
-        insert_data = [age]
+        # Prepare row data (age + sociodemographic fields)
+        insert_data = [age, marital_status, gender, occupation, education]
 
         # Append all checklist responses + grouped totals
         for i in range(24):
@@ -386,7 +402,7 @@ def submit():
 
         cur.execute(
             f"INSERT INTO human_maturography_records ("
-            "age, "
+            "age, marital_status, gender, occupation, education, "
             + ",".join([
                 # Generate dynamic columns for 24 lustra × 7 columns
                 *(f"fg_{col}" for col in ["motor","language","interactions","emotional","curiosity","self_recognition","total"]),
@@ -427,8 +443,15 @@ def submit():
         cur.close()
         conn.close()
 
-        # Return HTML result box
-        return render_template("result.html", result=result)
+        # Return HTML result box (include socio-demographic summary)
+        socio = {
+            "age": age,
+            "marital_status": marital_status,
+            "gender": gender,
+            "occupation": occupation,
+            "education": education
+        }
+        return render_template("result_snippet.html", result=result, socio=socio)
 
     except Exception as e:
         return f"<div class='alert alert-danger'>Error: {str(e)}</div>"
@@ -453,6 +476,10 @@ def admin():
         DT_COLUMNS = {
             "id": "ID",
             "age": "Age",
+            "marital_status": "Marital Status",
+            "gender": "Gender",
+            "occupation": "Occupation",
+            "education": "Highest Education",
             # Foundational Growth
             "fg_motor": "Foundational Growth: Demonstrates basic motor skills",
             "fg_language": "Foundational Growth: Acquires language fundamentals",
