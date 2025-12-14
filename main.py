@@ -413,7 +413,7 @@ def submit():
                 *(f"fa_{col}" for col in ["establish_family","career_advancement","financial_planning","work_life_balance","build_home_env","support_networks","total"]),
                 *(f"st_{col}" for col in ["stability_career","self_refinement","life_goal_adjustment","health_focus","work_life_balance","community_contribution","total"]),
                 *(f"ml_{col}" for col in ["reflect_achievements","adjust_goals","focus_purpose","meaningful_activities","strengthen_relationships","address_challenges","total"]),
-                *(f"er_{col}" for col in ["career_peak","mentorship_roles","children_focus","legacy_investment","community_service","balance_responsibilities","self_reflection","total"]),
+                *(f"er_{col}" for col in ["career_peak","mentorship_roles","children_focus","legacy_investment","community_service","balance_responsibilities","total"]),
                 *(f"sa_{col}" for col in ["nurtures_others","personal_goals","creative_interests","work_life_harmony","future_preparation","share_wisdom"]),
                 "sa2_total",
                 *(f"ws_{col}" for col in ["self_care","life_priority","mentoring_extensive","lifelong_learning","emotional_resilience","financial_planning","total"]),
