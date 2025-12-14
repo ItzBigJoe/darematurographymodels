@@ -458,334 +458,312 @@ def submit():
         return f"<div class='alert alert-danger'>Error: {str(e)}</div>"
 
 
+# Build a column mapping for all columns (defined once at module level)
+DT_COLUMNS = {
+    "id": "ID",
+    "age": "Age",
+    "marital_status": "Marital Status",
+    "gender": "Gender",
+    "occupation": "Occupation",
+    "education": "Highest Education",
+    # Foundational Growth
+    "fg_motor": "Foundational Growth: Demonstrates basic motor skills",
+    "fg_language": "Foundational Growth: Acquires language fundamentals",
+    "fg_interactions": "Foundational Growth: Engages in initial interactions",
+    "fg_emotional": "Foundational Growth: Forms emotional attachments",
+    "fg_curiosity": "Foundational Growth: Exhibits curiosity about the environment",
+    "fg_self_recognition": "Foundational Growth: Begins to recognize self in mirrors and responds to own name",
+    "fg_total": "Foundational Growth: Total",
+    # Social Awareness
+    "sa_friendships": "Social Awareness: Forms friendships with peers",
+    "sa_rules": "Social Awareness: Understands and follows basic rules in games",
+    "sa_empathy": "Social Awareness: Shows basic empathy",
+    "sa_self_regulation": "Social Awareness: Demonstrates self-regulation",
+    "sa_independence": "Social Awareness: Exhibits growing independence",
+    "sa_hobbies": "Social Awareness: Develops interests in hobbies or activities outside family influence",
+    "sa_total": "Social Awareness: Total",
+    # Identity Formation
+    "id_self_awareness": "Identity Formation: Increases self-awareness",
+    "id_peer_interest": "Identity Formation: Shows strong interest in peer groups and social acceptance",
+    "id_exploration": "Identity Formation: Explores identity through appearance, interests, or beliefs",
+    "id_emotional_challenges": "Identity Formation: Faces emotional challenges",
+    "id_abstract_thinking": "Identity Formation: Develops abstract thinking",
+    "id_physical_changes": "Identity Formation: Experiences physical changes associated with puberty",
+    "id_total": "Identity Formation: Total",
+    # Independence & Responsibility
+    "ir_independence": "Independence and Responsibility: Pursues greater independence",
+    "ir_responsibility": "Independence and Responsibility: Takes on early adult responsibilities",
+    "ir_vocational": "Independence and Responsibility: Explores vocational interests",
+    "ir_values": "Independence and Responsibility: Solidifies personal values and beliefs",
+    "ir_relationships": "Independence and Responsibility: Builds romantic relationships",
+    "ir_longterm_planning": "Independence and Responsibility: Develops long-term planning skills",
+    "ir_total": "Independence and Responsibility: Total",
+    # Career & Relationship Focus
+    "cr_transition_to_adult": "Career and Relationship Focus: Transitions to full adult roles",
+    "cr_focus_on_career": "Career and Relationship Focus: Focuses on career-building",
+    "cr_form_relationship": "Career and Relationship Focus: Forms deeper personal relationships",
+    "cr_longterm_goals": "Career and Relationship Focus: Begins considering long-term goals",
+    "cr_manages_finances": "Career and Relationship Focus: Manages personal finances",  
+    "cr_explore_identity": "Career and Relationship Focus: Explores self-identity in professional and social contexts",
+    "cr_total": "Career and Relationship Focus: Total",
+    #family and Career Advancement
+    "fa_establish_family": "Family and Career Advancement: Establishes a family",
+    "fa_career_advancement": "Family and Career Advancement: Advances in career",
+    "fa_financial_planning": "Family and Career Advancement: Engages in financial planning",
+    "fa_work_life_balance": "Family and Career Advancement: Balances multiple responsibilities",    
+    "fa_build_home_env": "Family and Career Advancement: Builds a stable home environment",
+    "fa_support_networks": "Family and Career Advancement: Develops stronger support networks", 
+    "fa_total": "Family and Career Advancement: Total",
+    # Stability and Growth
+    "st_stability_career": "Stability and Growth: Seeks stability in career and personal relationships",
+    "st_self_refinement": "Stability and Growth: Focuses on self-refinement",
+    "st_life_goal_adjustment": "Stability and Growth: Reassesses life goals",
+    "st_health_focus": "Stability and Growth: Prioritizes health and well-being",
+    "st_work_life_balance": "Stability and Growth: Manages work-life balance",
+    "st_community_contribution": "Stability and Growth: Contributes to community or professional networks",
+    "st_total": "Stability and Growth: Total",
+    # Mid-Life Reflection
+    "ml_reflect_achievements": "Mid-Life Reflection: Reflects on past achievements",
+    "ml_adjust_goals": "Mid-Life Reflection: Adjusts personal and professional goals",
+    "ml_focus_purpose": "Mid-Life Reflection: Increases focus on life purpose",
+    "ml_meaningful_activities": "Mid-Life Reflection: Pursues meaningful activities",
+    "ml_strengthen_relationships": "Mid-Life Reflection: Strengthens family bonds and friendships",
+    "ml_address_challenges": "Mid-Life Reflection: Addresses mid-life challenges",
+    "ml_total": "Mid-Life Reflection: Total",
+    # Expanded Responsibility
+    "er_career_peak": "Expanded Responsibility: Reaches career peak",
+    "er_mentorship_roles": "Expanded Responsibility: Takes on mentorship roles",
+    "er_children_focus": "Expanded Responsibility: Focuses on children's development",
+    "er_legacy_investment": "Expanded Responsibility: Invests in future legacy",
+    "er_community_service": "Expanded Responsibility: Engages actively in community service",
+    "er_balance_responsibilities": "Expanded Responsibility: Balances expanded responsibilities",
+    "er_self_reflection": "Expanded Responsibility: Recognizes personal strengths through self-reflection",
+    "er_total": "Expanded Responsibility: Total",
+    # Self-Actualization
+    "sa_nurtures_others": "Self-Actualization: Nurtures younger generations",
+    "sa_personal_goals": "Self-Actualization: Achieves fulfillment in long-term personal goals",
+    "sa_creative_interests": "Self-Actualization: Pursues creative or intellectual interests",
+    "sa_work_life_harmony": "Self-Actualization: Maintains work-life harmony",
+    "sa_future_preparation": "Self-Actualization: Prepares for future life transitions",
+    "sa_share_wisdom": "Self-Actualization: Broadens influence by sharing wisdom",
+    "sa2_total": "Self-Actualization: Total",   
+    # Wisdom Sharing
+    "ws_self_care": "Wisdom Sharing: Continues self-care routines", 
+    "ws_life_priority": "Wisdom Sharing: Re-evaluates life priorities",
+    "ws_mentoring_extensive": "Wisdom Sharing: Mentors others extensively", 
+    "ws_lifelong_learning": "Wisdom Sharing: Engages in lifelong learning", 
+    "ws_emotional_resilience": "Wisdom Sharing: Strengthens emotional resilience",
+    "ws_financial_planning": "Wisdom Sharing: Plans financially for retirement",
+    "ws_total": "Wisdom Sharing: Total",    
+    # Preparation for Later Years
+    "pr_lifestyle_adjustment": "Preparation for Later Years: Adjusts lifestyle for future needs",
+    "pr_meaningful_activities": "Preparation for Later Years: Pursues meaningful activities",
+    "pr_health_management": "Preparation for Later Years: Manages health proactively",  
+    "pr_legacy_building": "Preparation for Later Years: Builds legacy through family or community contributions",
+    "pr_career_transition": "Preparation for Later Years: Transitions career towards reduced hours",
+    "pr_retirement": "Preparation for Later Years: Enters retirement or reduces workload",  
+    "pr_total": "Preparation for Later Years: Total",
+    # Legacy and Reflection 
+    "lr_community_contribution": "Legacy and Reflection: Contributes via community service",
+    "lr_document_life": "Legacy and Reflection: Writes memoirs or documents life experiences",
+    "lr_family_connections": "Legacy and Reflection: Enjoys deeper family connections", 
+    "lr_reflect_achievements": "Legacy and Reflection: Reflects on life achievements",
+    "lr_social_engagement": "Legacy and Reflection: Maintains social engagements",  
+    "lr_emotional_stability": "Legacy and Reflection: Focuses on emotional stability",
+    "lr_total": "Legacy and Reflection: Total",
+    # Emotional Balance
+    "em_mental_wellbeing": "Emotional Balance: Prioritizes mental well-being",
+    "em_gratitude": "Emotional Balance: Fosters gratitude", 
+    "em_life_acceptance": "Emotional Balance: Accepts life's stages",
+    "em_simple_joy": "Emotional Balance: Finds joy in simpler aspects",
+    "em_positive_outlook": "Emotional Balance: Maintains positive outlook",
+    "em_counsel_others": "Emotional Balance: Offers counsel and mentorship",
+    "em_total": "Emotional Balance: Total",
+    # Wisdom and Mentorship
+    "wm_offer_councel":"Offers counsel to younger members",
+    "wm_find_peace": "Finds peace with accomplishments",
+    "wm_foster_resilience": "Fosters personal resilience",
+    "wm_shares_stories": "Shares stories and lessons",
+    "wm_spiritual_pursuits": ": Engages in spiritual pursuits",
+    "wm_meaningful_relationship": "Prioritizes meaningful relationships",
+    "wm_total": "Wisdom and Mentorship: Total",
+    # Acceptance and Resilience
+    "ar_adapts_to_health": "Acceptance and Resilience: Strengthens key relationships",
+    "ar_strengthen_relationships": "Acceptance and Resilience: Passes on traditions and cultural knowledge",
+    "ar_pass_on_traditions": "Acceptance and Resilience: Appreciates life's journey",
+    "ar_life_reflection": "Acceptance and Resilience: Builds resilience against aging challenges",
+    "ar_resilience_aging": "Acceptance and Resilience: Maintains independence", 
+    "ar_maintain_independence": "Acceptance and Resilience: Total",
+    "ar_total": "Acceptance and Resilience: Total", 
+    # Serenity and Reflection
+    "sr_serenity_practices": "Serenity and Reflection: Reflects deeply on life experiences",
+    "sr_life_reflection": "Serenity and Reflection: Celebrates family milestones",  
+    "sr_family_milestones": "Serenity and Reflection: Enjoys quiet pursuits",
+    "sr_quiet_pursuits": "Serenity and Reflection: Relies on support networks",
+    "sr_support_networks": "Serenity and Reflection: Maintains a sense of purpose",
+    "sr_sense_of_purpose": "Serenity and Reflection: Total",    
+    "sr_total": "Serenity and Reflection: Total",
+    # Legacy Fulfillment    
+    "lf_storytelling": "Legacy Fulfillment: Engages in storytelling to preserve history",
+    "lf_inspire_future": "Legacy Fulfillment: Inspires future generations", 
+    "lf_spiritual_beliefs": "Legacy Fulfillment: Relies on spiritual beliefs",
+    "lf_family_connections": "Legacy Fulfillment: Deepens family connections",
+    "lf_focus_legacy": "Legacy Fulfillment: Focuses on legacy fulfillment",
+    "lf_accept_assistance": "Legacy Fulfilment: Accepts assistance gracefully",
+    "lf_total": "Legacy Fulfillment: Total",
+    # Contentment and Inner Peace
+    "co_inner_peace": "Contentment and Inner Peace: Emphasizes inner peace through mindfulness",
+    "co_simplicity": "Contentment and Inner Peace: Embraces simplicity",
+    "co_strengthen_bonds": "Contentment and Inner Peace: Strengthens bonds with loved ones",
+    "co_express_gratitude": "Contentment and Inner Peace: Expresses gratitude",
+    "co_positive_memories": "Contentment and Inner Peace: Reflects on positive memories",
+    "co_prioritize_wellbeing": "Contentment and Inner Peace: Prioritizes comfort and well-being",
+    "co_total": "Contentment and Inner Peace: Total",   
+    # Completion of Legacy
+    "rs_final_reflection": "Completion of Legacy: Engages in final reflections",    
+    "rs_preserve_memories": "Completion of Legacy: Preserves memories",
+    "rs_support_systems": "Completion of Legacy: Relies on support systems",    
+    "rs_spiritual_closure": "Completion of Legacy: Seeks spiritual closure",
+    "rs_share_wisdom": "Completion of Legacy: Shares final wisdom", 
+    "rs_end_of_life": "Completion of Legacy: Accepts end-of-life transitions",
+    "rs_total": "Completion of Legacy: Total",
+    # Extended Reflection
+    "ex_century_reflection": "Extended Reflection: Reflects on a century's worth of experiences",
+    "ex_share_wisdom": "Extended Reflection: Shares profound life wisdom",
+    "ex_family_unity": "Extended Reflection: Fosters family unity", 
+    "ex_celebrate_centenarian": "Extended Reflection: Celebrates centenarian status",
+    "ex_mental_engagement": "Extended Reflection: Maintains mental engagement",
+    "ex_historical_perspective": "Extended Reflection: Appreciates historical perspectives",
+    "ex_total": "Extended Reflection: Total",
+    # Peaceful Acceptance
+    "pa_life_stages": "Peaceful Acceptance: Embraces life's final stages peacefully",
+    "pa_dignity": "Peaceful Acceptance: Focuses on maintaining dignity",    
+    "pa_meaningful_connections": "Peaceful Acceptance: Prioritizes meaningful connections",
+    "pa_daily_comfort": "Peaceful Acceptance: Seeks comfort in daily routines",
+    "pa_caregivers": "Peaceful Acceptance: Relies heavily on caregivers",
+    "pa_memories_solace": "Peaceful Acceptance: Finds solace in memories",  
+    "pa_total": "Peaceful Acceptance: Total",
+    # Gratitude for Longevity
+    "gl_celebrate_longevity": "Gratitude for Longevity: Celebrates exceptional longevity",
+    "gl_express_gratitude": "Gratitude for Longevity: Expresses gratitude for family and caregivers",
+    "gl_foster_peace": "Gratitude for Longevity: Fosters peace within self and others",
+    "gl_appreciate_legacy": "Gratitude for Longevity: Appreciates established legacy",
+    "gl_share_insights": "Gratitude for Longevity: Shares rare insights from extreme age",
+    "gl_grateful_mindset": "Gratitude for Longevity: Maintains a grateful mindset",
+    "gl_total": "Gratitude for Longevity: Total",
+    # Final Milestones
+    "fm_accept_life_cycle": "Final Milestones: Accepts the full cycle of life",
+    "fm_pass_wisdom": "Final Milestones: Passes on last pieces of wisdom",
+    "fm_find_closure": "Final Milestones: Finds closure in achievements",   
+    "fm_lifetime_reflection": "Final Milestones: Reflects on a lifetime of milestones",
+    "fm_support_system": "Final Milestones: Relies on comprehensive support",
+    "fm_final_peace": "Final Milestones: Embraces final peace",
+    "fm_total": "Final Milestones: Total",
+    # Observed/Predicted
+    "observed_lustrum": "Observed Lustrum",
+    "observed_decade": "Observed Decade",
+    "observed_generation": "Observed Generation",
+    "observed_life_stage": "Observed Life Stage",
+    "observed_human_maturogram": "Observed Human Maturogram",
+    "predicted_lustrum": "Predicted Lustrum",
+    "predicted_decade": "Predicted Decade",
+    "predicted_generation": "Predicted Generation",
+    "predicted_life_stage": "Predicted Life Stage",
+    "predicted_human_maturogram": "Predicted Human Maturogram",
+    "percentage_hm": "Percentage Human Maturogram",
+    "maturity_zone": "Maturity zone"
+}
+
+# Helper to convert a pg8000 row to dict
+def row_to_dict(cur, row):
+    return {desc[0]: row[idx] for idx, desc in enumerate(cur.description)} if hasattr(cur, 'description') else dict(row)
+
+
 @main.route("/admin")
 @admin_required
 def admin():
-    if not session.get("admin_logged_in"):
-        return redirect(url_for("login"))
-
-    conn = get_db_connection()
-    try:
-        df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
-    finally:
-        conn.close()
-
-    if df.empty:
-        table_html = "<p class='text-center text-muted'>No records available.</p>"
-    else:
-        # Build a column mapping for all columns
-        DT_COLUMNS = {
-            "id": "ID",
-            "age": "Age",
-            "marital_status": "Marital Status",
-            "gender": "Gender",
-            "occupation": "Occupation",
-            "education": "Highest Education",
-            # Foundational Growth
-            "fg_motor": "Foundational Growth: Demonstrates basic motor skills",
-            "fg_language": "Foundational Growth: Acquires language fundamentals",
-            "fg_interactions": "Foundational Growth: Engages in initial interactions",
-            "fg_emotional": "Foundational Growth: Forms emotional attachments",
-            "fg_curiosity": "Foundational Growth: Exhibits curiosity about the environment",
-            "fg_self_recognition": "Foundational Growth: Begins to recognize self in mirrors and responds to own name",
-            "fg_total": "Foundational Growth: Total",
-            # Social Awareness
-            "sa_friendships": "Social Awareness: Forms friendships with peers",
-            "sa_rules": "Social Awareness: Understands and follows basic rules in games",
-            "sa_empathy": "Social Awareness: Shows basic empathy",
-            "sa_self_regulation": "Social Awareness: Demonstrates self-regulation",
-            "sa_independence": "Social Awareness: Exhibits growing independence",
-            "sa_hobbies": "Social Awareness: Develops interests in hobbies or activities outside family influence",
-            "sa_total": "Social Awareness: Total",
-            # Identity Formation
-            "id_self_awareness": "Identity Formation: Increases self-awareness",
-            "id_peer_interest": "Identity Formation: Shows strong interest in peer groups and social acceptance",
-            "id_exploration": "Identity Formation: Explores identity through appearance, interests, or beliefs",
-            "id_emotional_challenges": "Identity Formation: Faces emotional challenges",
-            "id_abstract_thinking": "Identity Formation: Develops abstract thinking",
-            "id_physical_changes": "Identity Formation: Experiences physical changes associated with puberty",
-            "id_total": "Identity Formation: Total",
-            # Independence & Responsibility
-            "ir_independence": "Independence and Responsibility: Pursues greater independence",
-            "ir_responsibility": "Independence and Responsibility: Takes on early adult responsibilities",
-            "ir_vocational": "Independence and Responsibility: Explores vocational interests",
-            "ir_values": "Independence and Responsibility: Solidifies personal values and beliefs",
-            "ir_relationships": "Independence and Responsibility: Builds romantic relationships",
-            "ir_longterm_planning": "Independence and Responsibility: Develops long-term planning skills",
-            "ir_total": "Independence and Responsibility: Total",
-            # Career & Relationship Focus
-            "cr_transition_to_adult": "Career and Relationship Focus: Transitions to full adult roles",
-            "cr_focus_on_career": "Career and Relationship Focus: Focuses on career-building",
-            "cr_form_relationship": "Career and Relationship Focus: Forms deeper personal relationships",
-            "cr_longterm_goals": "Career and Relationship Focus: Begins considering long-term goals",
-            "cr_manages_finances": "Career and Relationship Focus: Manages personal finances",  
-            "cr_explore_identity": "Career and Relationship Focus: Explores self-identity in professional and social contexts",
-            "cr_total": "Career and Relationship Focus: Total",
-            #family and Career Advancement
-            "fa_establish_family": "Family and Career Advancement: Establishes a family",
-            "fa_career_advancement": "Family and Career Advancement: Advances in career",
-            "fa_financial_planning": "Family and Career Advancement: Engages in financial planning",
-            "fa_work_life_balance": "Family and Career Advancement: Balances multiple responsibilities",    
-            "fa_build_home_env": "Family and Career Advancement: Builds a stable home environment",
-            "fa_support_networks": "Family and Career Advancement: Develops stronger support networks", 
-            "fa_total": "Family and Career Advancement: Total",
-            # Stability and Growth
-            "st_stability_career": "Stability and Growth: Seeks stability in career and personal relationships",
-            "st_self_refinement": "Stability and Growth: Focuses on self-refinement",
-            "st_life_goal_adjustment": "Stability and Growth: Reassesses life goals",
-            "st_health_focus": "Stability and Growth: Prioritizes health and well-being",
-            "st_work_life_balance": "Stability and Growth: Manages work-life balance",
-            "st_community_contribution": "Stability and Growth: Contributes to community or professional networks",
-            "st_total": "Stability and Growth: Total",
-            # Mid-Life Reflection
-            "ml_reflect_achievements": "Mid-Life Reflection: Reflects on past achievements",
-            "ml_adjust_goals": "Mid-Life Reflection: Adjusts personal and professional goals",
-            "ml_focus_purpose": "Mid-Life Reflection: Increases focus on life purpose",
-            "ml_meaningful_activities": "Mid-Life Reflection: Pursues meaningful activities",
-            "ml_strengthen_relationships": "Mid-Life Reflection: Strengthens family bonds and friendships",
-            "ml_address_challenges": "Mid-Life Reflection: Addresses mid-life challenges",
-            "ml_total": "Mid-Life Reflection: Total",
-            # Expanded Responsibility
-            "er_career_peak": "Expanded Responsibility: Reaches career peak",
-            "er_mentorship_roles": "Expanded Responsibility: Takes on mentorship roles",
-            "er_children_focus": "Expanded Responsibility: Focuses on children's development",
-            "er_legacy_investment": "Expanded Responsibility: Invests in future legacy",
-            "er_community_service": "Expanded Responsibility: Engages actively in community service",
-            "er_balance_responsibilities": "Expanded Responsibility: Balances expanded responsibilities",
-            "er_self_reflection": "Expanded Responsibility: Recognizes personal strengths through self-reflection",
-            "er_total": "Expanded Responsibility: Total",
-            # Self-Actualization
-            "sa_nurtures_others": "Self-Actualization: Nurtures younger generations",
-            "sa_personal_goals": "Self-Actualization: Achieves fulfillment in long-term personal goals",
-            "sa_creative_interests": "Self-Actualization: Pursues creative or intellectual interests",
-            "sa_work_life_harmony": "Self-Actualization: Maintains work-life harmony",
-            "sa_future_preparation": "Self-Actualization: Prepares for future life transitions",
-            "sa_share_wisdom": "Self-Actualization: Broadens influence by sharing wisdom",
-            "sa2_total": "Self-Actualization: Total",   
-            # Wisdom Sharing
-            "ws_self_care": "Wisdom Sharing: Continues self-care routines", 
-            "ws_life_priority": "Wisdom Sharing: Re-evaluates life priorities",
-            "ws_mentoring_extensive": "Wisdom Sharing: Mentors others extensively", 
-            "ws_lifelong_learning": "Wisdom Sharing: Engages in lifelong learning", 
-            "ws_emotional_resilience": "Wisdom Sharing: Strengthens emotional resilience",
-            "ws_financial_planning": "Wisdom Sharing: Plans financially for retirement",
-            "ws_total": "Wisdom Sharing: Total",    
-            # Preparation for Later Years
-            "pr_lifestyle_adjustment": "Preparation for Later Years: Adjusts lifestyle for future needs",
-            "pr_meaningful_activities": "Preparation for Later Years: Pursues meaningful activities",
-            "pr_health_management": "Preparation for Later Years: Manages health proactively",  
-            "pr_legacy_building": "Preparation for Later Years: Builds legacy through family or community contributions",
-            "pr_career_transition": "Preparation for Later Years: Transitions career towards reduced hours",
-            "pr_retirement": "Preparation for Later Years: Enters retirement or reduces workload",  
-            "pr_total": "Preparation for Later Years: Total",
-            # Legacy and Reflection 
-            "lr_community_contribution": "Legacy and Reflection: Contributes via community service",
-            "lr_document_life": "Legacy and Reflection: Writes memoirs or documents life experiences",
-            "lr_family_connections": "Legacy and Reflection: Enjoys deeper family connections", 
-            "lr_reflect_achievements": "Legacy and Reflection: Reflects on life achievements",
-            "lr_social_engagement": "Legacy and Reflection: Maintains social engagements",  
-            "lr_emotional_stability": "Legacy and Reflection: Focuses on emotional stability",
-            "lr_total": "Legacy and Reflection: Total",
-            # Emotional Balance
-            "em_mental_wellbeing": "Emotional Balance: Prioritizes mental well-being",
-            "em_gratitude": "Emotional Balance: Fosters gratitude", 
-            "em_life_acceptance": "Emotional Balance: Accepts life's stages",
-            "em_simple_joy": "Emotional Balance: Finds joy in simpler aspects",
-            "em_positive_outlook": "Emotional Balance: Maintains positive outlook",
-            "em_counsel_others": "Emotional Balance: Offers counsel and mentorship",
-            "em_total": "Emotional Balance: Total",
-            # Wisdom and Mentorship
-            "wm_offer_councel":"Offers counsel to younger members",
-            "wm_find_peace": "Finds peace with accomplishments",
-            "wm_foster_resilience": "Fosters personal resilience",
-            "wm_shares_stories": "Shares stories and lessons",
-            "wm_spiritual_pursuits": ": Engages in spiritual pursuits",
-            "wm_meaningful_relationship": "Prioritizes meaningful relationships",
-            "wm_total": "Wisdom and Mentorship: Total",
-            # Acceptance and Resilience
-            "ar_adapts_to_health": "Acceptance and Resilience: Strengthens key relationships",
-            "ar_strengthen_relationships": "Acceptance and Resilience: Passes on traditions and cultural knowledge",
-            "ar_pass_on_traditions": "Acceptance and Resilience: Appreciates life's journey",
-            "ar_life_reflection": "Acceptance and Resilience: Builds resilience against aging challenges",
-            "ar_resilience_aging": "Acceptance and Resilience: Maintains independence", 
-            "ar_maintain_independence": "Acceptance and Resilience: Total",
-            "ar_total": "Acceptance and Resilience: Total", 
-            # Serenity and Reflection
-            "sr_serenity_practices": "Serenity and Reflection: Reflects deeply on life experiences",
-            "sr_life_reflection": "Serenity and Reflection: Celebrates family milestones",  
-            "sr_family_milestones": "Serenity and Reflection: Enjoys quiet pursuits",
-            "sr_quiet_pursuits": "Serenity and Reflection: Relies on support networks",
-            "sr_support_networks": "Serenity and Reflection: Maintains a sense of purpose",
-            "sr_sense_of_purpose": "Serenity and Reflection: Total",    
-            "sr_total": "Serenity and Reflection: Total",
-            # Legacy Fulfillment    
-            "lf_storytelling": "Legacy Fulfillment: Engages in storytelling to preserve history",
-            "lf_inspire_future": "Legacy Fulfillment: Inspires future generations", 
-            "lf_spiritual_beliefs": "Legacy Fulfillment: Relies on spiritual beliefs",
-            "lf_family_connections": "Legacy Fulfillment: Deepens family connections",
-            "lf_focus_legacy": "Legacy Fulfillment: Focuses on legacy fulfillment",
-            "lf_accept_assistance": "Legacy Fulfilment: Accepts assistance gracefully",
-            "lf_total": "Legacy Fulfillment: Total",
-            # Contentment and Inner Peace
-            "co_inner_peace": "Contentment and Inner Peace: Emphasizes inner peace through mindfulness",
-            "co_simplicity": "Contentment and Inner Peace: Embraces simplicity",
-            "co_strengthen_bonds": "Contentment and Inner Peace: Strengthens bonds with loved ones",
-            "co_express_gratitude": "Contentment and Inner Peace: Expresses gratitude",
-            "co_positive_memories": "Contentment and Inner Peace: Reflects on positive memories",
-            "co_prioritize_wellbeing": "Contentment and Inner Peace: Prioritizes comfort and well-being",
-            "co_total": "Contentment and Inner Peace: Total",   
-            # Completion of Legacy
-            "rs_final_reflection": "Completion of Legacy: Engages in final reflections",    
-            "rs_preserve_memories": "Completion of Legacy: Preserves memories",
-            "rs_support_systems": "Completion of Legacy: Relies on support systems",    
-            "rs_spiritual_closure": "Completion of Legacy: Seeks spiritual closure",
-            "rs_share_wisdom": "Completion of Legacy: Shares final wisdom", 
-            "rs_end_of_life": "Completion of Legacy: Accepts end-of-life transitions",
-            "rs_total": "Completion of Legacy: Total",
-            # Extended Reflection
-            "ex_century_reflection": "Extended Reflection: Reflects on a century's worth of experiences",
-            "ex_share_wisdom": "Extended Reflection: Shares profound life wisdom",
-            "ex_family_unity": "Extended Reflection: Fosters family unity", 
-            "ex_celebrate_centenarian": "Extended Reflection: Celebrates centenarian status",
-            "ex_mental_engagement": "Extended Reflection: Maintains mental engagement",
-            "ex_historical_perspective": "Extended Reflection: Appreciates historical perspectives",
-            "ex_total": "Extended Reflection: Total",
-            # Peaceful Acceptance
-            "pa_life_stages": "Peaceful Acceptance: Embraces life's final stages peacefully",
-            "pa_dignity": "Peaceful Acceptance: Focuses on maintaining dignity",    
-            "pa_meaningful_connections": "Peaceful Acceptance: Prioritizes meaningful connections",
-            "pa_daily_comfort": "Peaceful Acceptance: Seeks comfort in daily routines",
-            "pa_caregivers": "Peaceful Acceptance: Relies heavily on caregivers",
-            "pa_memories_solace": "Peaceful Acceptance: Finds solace in memories",  
-            "pa_total": "Peaceful Acceptance: Total",
-            # Gratitude for Longevity
-            "gl_celebrate_longevity": "Gratitude for Longevity: Celebrates exceptional longevity",
-            "gl_express_gratitude": "Gratitude for Longevity: Expresses gratitude for family and caregivers",
-            "gl_foster_peace": "Gratitude for Longevity: Fosters peace within self and others",
-            "gl_appreciate_legacy": "Gratitude for Longevity: Appreciates established legacy",
-            "gl_share_insights": "Gratitude for Longevity: Shares rare insights from extreme age",
-            "gl_grateful_mindset": "Gratitude for Longevity: Maintains a grateful mindset",
-            "gl_total": "Gratitude for Longevity: Total",
-            # Final Milestones
-            "fm_accept_life_cycle": "Final Milestones: Accepts the full cycle of life",
-            "fm_pass_wisdom": "Final Milestones: Passes on last pieces of wisdom",
-            "fm_find_closure": "Final Milestones: Finds closure in achievements",   
-            "fm_lifetime_reflection": "Final Milestones: Reflects on a lifetime of milestones",
-            "fm_support_system": "Final Milestones: Relies on comprehensive support",
-            "fm_final_peace": "Final Milestones: Embraces final peace",
-            "fm_total": "Final Milestones: Total",
-            # Observed/Predicted
-            "observed_lustrum": "Observed Lustrum",
-            "observed_decade": "Observed Decade",
-            "observed_generation": "Observed Generation",
-            "observed_life_stage": "Observed Life Stage",
-            "observed_human_maturogram": "Observed Human Maturogram",
-            "predicted_lustrum": "Predicted Lustrum",
-            "predicted_decade": "Predicted Decade",
-            "predicted_generation": "Predicted Generation",
-            "predicted_life_stage": "Predicted Life Stage",
-            "predicted_human_maturogram": "Predicted Human Maturogram",
-            "percentage_hm": "Percentage Human Maturogram",
-            "maturity_zone": "Maturity zone"
-        }
-        
-        # Helper to convert a psycopg2 row to dict
-        def row_to_dict(cur, row):
-            return {desc[0]: row[idx] for idx, desc in enumerate(cur.description)} if hasattr(cur, 'description') else dict(row)
+    return render_template("admin.html")
 
 
-        # Admin page (keeps rendering same admin.html)
-        @main.route("/admin")
-        @admin_required
-        def admin():
-            # admin.html will load data via AJAX from /admin_data
-            return render_template("admin.html")
+@main.route("/admin_data", methods=["GET", "POST"])
+@admin_required
+def admin_data():
+    # DataTables uses parameters like draw, start, length, search[value], order...
+    params = request.values
 
-        # Server-side DataTables endpoint
-        @main.route("/admin_data", methods=["GET", "POST"])
-        @admin_required
-        def admin_data():
-            # DataTables uses parameters like draw, start, length, search[value], order...
-            params = request.values
+    draw = int(params.get("draw", 1))
+    start = int(params.get("start", 0))
+    length = int(params.get("length", 10))
+    search_value = params.get("search[value]", "").strip()
 
-            draw = int(params.get("draw", 1))
-            start = int(params.get("start", 0))
-            length = int(params.get("length", 10))
-            search_value = params.get("search[value]", "").strip()
-
-            # Ordering
-            order_col_index = params.get("order[0][column]")
-            order_col_dir = params.get("order[0][dir]", "asc")
+    # Ordering
+    order_col_index = params.get("order[0][column]")
+    order_col_dir = params.get("order[0][dir]", "asc")
+    order_col = None
+    if order_col_index is not None:
+        try:
+            order_col_index = int(order_col_index)
+            # Map index to column name as we send DT_COLUMNS to the client in same order
+            col_names = list(DT_COLUMNS.keys())
+            if 0 <= order_col_index < len(col_names):
+                order_col = col_names[order_col_index]
+        except:
             order_col = None
-            if order_col_index is not None:
-                try:
-                    order_col_index = int(order_col_index)
-                    # Map index to column name as we send DT_COLUMNS to the client in same order
-                    if 0 <= order_col_index < len(DT_COLUMNS):
-                        order_col = DT_COLUMNS[order_col_index]
-                except:
-                    order_col = None
 
-            # Build base query
-            select_cols = ", ".join(DT_COLUMNS)
-            base_query = f"SELECT {select_cols} FROM human_maturography_records"
+    # Build base query
+    select_cols = ", ".join(DT_COLUMNS.keys())
+    base_query = f"SELECT {select_cols} FROM human_maturography_records"
 
-            # Count total records
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(1) FROM human_maturography_records")
-            total_records = cur.fetchone()[0]
+    # Count total records
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(1) FROM human_maturography_records")
+    total_records = cur.fetchone()[0]
 
-            # Filtering
-            where_clause = ""
-            values = []
-            if search_value:
-                # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
-                where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
-                sv = f"%{search_value}%"
-                values.extend([sv, sv, sv])
+    # Filtering
+    where_clause = ""
+    values = []
+    if search_value:
+        # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
+        where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
+        sv = f"%{search_value}%"
+        values.extend([sv, sv, sv])
 
-            # Count filtered
-            count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
-            cur.execute(count_query, values)
-            filtered_records = cur.fetchone()[0]
+    # Count filtered
+    count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
+    cur.execute(count_query, values)
+    filtered_records = cur.fetchone()[0]
 
-            # Ordering & Pagination
-            order_sql = ""
-            if order_col:
-                # safety: order_col must be valid and from our whitelist
-                order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
-            limit_sql = " LIMIT %s OFFSET %s"
-            values.extend([length, start])
+    # Ordering & Pagination
+    order_sql = ""
+    if order_col:
+        # safety: order_col must be valid and from our whitelist
+        order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
+    limit_sql = " LIMIT %s OFFSET %s"
+    values.extend([length, start])
 
-            final_query = base_query + where_clause + order_sql + limit_sql
+    final_query = base_query + where_clause + order_sql + limit_sql
 
-            cur.execute(final_query, values)
-            rows = cur.fetchall()
+    cur.execute(final_query, values)
+    rows = cur.fetchall()
 
-            data = []
-            for row in rows:
-                rowd = row_to_dict(cur, row)
-                # Keep order consistent with DT_COLUMNS (so client can render columns easily)
-                data.append([rowd.get(c) for c in DT_COLUMNS])
+    data = []
+    for row in rows:
+        rowd = row_to_dict(cur, row)
+        # Keep order consistent with DT_COLUMNS (so client can render columns easily)
+        data.append([rowd.get(c) for c in DT_COLUMNS.keys()])
 
-            # Build response according to DataTables server-side spec
-            response = {
-                "draw": draw,
-                "recordsTotal": total_records,
-                "recordsFiltered": filtered_records,
-                "data": data
-            }
+    # Build response according to DataTables server-side spec
+    response = {
+        "draw": draw,
+        "recordsTotal": total_records,
+        "recordsFiltered": filtered_records,
+        "data": data
+    }
 
-            cur.close()
-            conn.close()
-            return jsonify(response)
-    # Rename dataframe columns for display
-        df_display = df.rename(columns=DT_COLUMNS)
-        table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)
-
-    # Finally, render template with table
-    return render_template("admin.html", table_html=table_html)
+    cur.close()
+    conn.close()
+    return jsonify(response)
 
 @main.route("/download")
 def download():
