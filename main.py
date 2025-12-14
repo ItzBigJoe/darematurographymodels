@@ -795,6 +795,15 @@ def load_cache_df():
     if os.path.exists(CACHE_FILE):
         try:
             df = _pd.read_csv(CACHE_FILE)
+            # Ensure __cached_at exists (for delete/undo functionality)
+            if "__cached_at" not in df.columns:
+                # Generate identifiers for rows that don't have one
+                df["__cached_at"] = df.apply(
+                    lambda r: f"legacy_{r.get('id', 'unknown')}_{datetime.datetime.utcnow().timestamp()}",
+                    axis=1
+                )
+                # Save the updated cache
+                df.to_csv(CACHE_FILE, index=False)
             return df
         except Exception:
             return _pd.DataFrame()
@@ -820,6 +829,12 @@ def admin():
                     conn.close()
                 # Save full DB snapshot to cache for future admin views
                 if not df.empty:
+                    # Add __cached_at before saving
+                    if "__cached_at" not in df.columns:
+                        df["__cached_at"] = df.apply(
+                            lambda r: f"legacy_{r.get('id', 'unknown')}_{datetime.datetime.utcnow().timestamp()}",
+                            axis=1
+                        )
                     os.makedirs(CACHE_DIR, exist_ok=True)
                     df.to_csv(CACHE_FILE, index=False)
             except Exception:
@@ -833,10 +848,10 @@ def admin():
             for c in DT_COLUMNS.keys():
                 if c not in df.columns:
                     df[c] = None
-            df_display = df.rename(columns=DT_COLUMNS)
             # Ensure a cache identifier exists for each row (used for delete operations)
             if "__cached_at" not in df.columns:
-                df["__cached_at"] = df.apply(lambda r: f"db_{r.get('id','')}_{datetime.datetime.utcnow().timestamp()}", axis=1)
+                df["__cached_at"] = df.apply(lambda r: f"legacy_{r.get('id','')}_{datetime.datetime.utcnow().timestamp()}", axis=1)
+            df_display = df.rename(columns=DT_COLUMNS)
             # Add Actions column with Delete button (HTML); escape=False below allows HTML.
             df_display["Actions"] = df["__cached_at"].apply(lambda ts: f"<button class='btn btn-sm btn-danger delete-row' data-cached-at=\"{ts}\">Delete</button>")
             table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)
