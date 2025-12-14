@@ -956,7 +956,10 @@ def admin_delete_row():
         return jsonify({"success": False, "error": "cache empty"}), 404
 
     # Find matching rows
-    mask = df.get("__cached_at") == cached_at
+    if "__cached_at" not in df.columns:
+        return jsonify({"success": False, "error": "cache format invalid (missing __cached_at)"}), 400
+
+    mask = df["__cached_at"] == cached_at
     if not mask.any():
         return jsonify({"success": False, "error": "row not found"}), 404
 
