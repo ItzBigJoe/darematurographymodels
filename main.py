@@ -703,7 +703,26 @@ def row_to_dict(cur, row):
 @main.route("/admin")
 @admin_required
 def admin():
-    return render_template("admin.html")
+    # Try to load records and render a table on the admin page.
+    try:
+        conn = get_db_connection()
+        try:
+            df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+        finally:
+            conn.close()
+
+        if df.empty:
+            table_html = "<p class='text-center text-muted'>No records available.</p>"
+        else:
+            # Rename columns for display
+            df_display = df.rename(columns=DT_COLUMNS)
+            table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)
+
+    except Exception as e:
+        # If DB not available or query fails, show a friendly message and allow admin_data AJAX to be used.
+        table_html = f"<div class='alert alert-warning'>Unable to load records: {type(e).__name__}.</div>"
+
+    return render_template("admin.html", table_html=table_html)
 
 
 @main.route("/admin_data", methods=["GET", "POST"])
