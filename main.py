@@ -3,6 +3,7 @@ import sqlite3
 import pandas as pd
 from maturography import MaturographyCalculator
 from datetime import timedelta
+import socket
 
 main = Flask(__name__)
 main.secret_key = "your_super_secret_key"  # Change this to a secure random key
@@ -11,6 +12,7 @@ main.permanent_session_lifetime = timedelta(minutes=30)
 # ------------------ DATABASE CONNECTION ------------------
 import pg8000.dbapi
 import os
+import ssl
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,13 +21,16 @@ load_dotenv()
 
 
 def get_db_connection():
+    # Build SSL context for Render (pg8000 expects an SSLContext, not a boolean)
+    ssl_ctx = ssl.create_default_context()
     conn = pg8000.dbapi.connect(
         host=os.getenv("DB_HOST"),
         database=os.getenv("DB_NAME"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         port=int(os.getenv("DB_PORT", 5432)),
-        ssl_context=True  # Enable SSL for Render PostgreSQL
+        ssl_context=ssl_ctx,
+        timeout=5  # Add 5-second timeout to prevent hanging on unreachable hosts
     )
     return conn
 
@@ -112,7 +117,23 @@ def init_db():
     conn.close()
 
 
-init_db()
+# Initialize DB only when a remote DB is configured. This avoids
+# attempting to resolve the remote host during local development
+# (which can trigger getaddrinfo/socket errors).
+if os.getenv("DB_HOST"):
+    # Set a short timeout to fail fast in dev mode
+    socket.setdefaulttimeout(2)
+    try:
+        init_db()
+        print("✓ Database initialized successfully")
+    except Exception as e:
+        # Do not crash startup on DB init failure; surface a helpful message.
+        print(f"⚠️  Database initialization failed: {type(e).__name__}")
+        print("   App will run without database (queries will fail)")
+    finally:
+        socket.setdefaulttimeout(None)  # Reset to default
+else:
+    print("ℹ️  DB_HOST not configured — running in dev mode")
 
 # ------------------ GLOBAL DATA ------------------
 focus_texts = [
@@ -688,91 +709,105 @@ def admin():
 @main.route("/admin_data", methods=["GET", "POST"])
 @admin_required
 def admin_data():
-    # DataTables uses parameters like draw, start, length, search[value], order...
-    params = request.values
+    try:
+        # DataTables uses parameters like draw, start, length, search[value], order...
+        params = request.values
 
-    draw = int(params.get("draw", 1))
-    start = int(params.get("start", 0))
-    length = int(params.get("length", 10))
-    search_value = params.get("search[value]", "").strip()
+        draw = int(params.get("draw", 1))
+        start = int(params.get("start", 0))
+        length = int(params.get("length", 10))
+        search_value = params.get("search[value]", "").strip()
 
-    # Ordering
-    order_col_index = params.get("order[0][column]")
-    order_col_dir = params.get("order[0][dir]", "asc")
-    order_col = None
-    if order_col_index is not None:
-        try:
-            order_col_index = int(order_col_index)
-            # Map index to column name as we send DT_COLUMNS to the client in same order
-            col_names = list(DT_COLUMNS.keys())
-            if 0 <= order_col_index < len(col_names):
-                order_col = col_names[order_col_index]
-        except:
-            order_col = None
+        # Ordering
+        order_col_index = params.get("order[0][column]")
+        order_col_dir = params.get("order[0][dir]", "asc")
+        order_col = None
+        if order_col_index is not None:
+            try:
+                order_col_index = int(order_col_index)
+                # Map index to column name as we send DT_COLUMNS to the client in same order
+                col_names = list(DT_COLUMNS.keys())
+                if 0 <= order_col_index < len(col_names):
+                    order_col = col_names[order_col_index]
+            except:
+                order_col = None
 
-    # Build base query
-    select_cols = ", ".join(DT_COLUMNS.keys())
-    base_query = f"SELECT {select_cols} FROM human_maturography_records"
+        # Build base query
+        select_cols = ", ".join(DT_COLUMNS.keys())
+        base_query = f"SELECT {select_cols} FROM human_maturography_records"
 
-    # Count total records
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(1) FROM human_maturography_records")
-    total_records = cur.fetchone()[0]
+        # Count total records
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(1) FROM human_maturography_records")
+        total_records = cur.fetchone()[0]
 
-    # Filtering
-    where_clause = ""
-    values = []
-    if search_value:
-        # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
-        where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
-        sv = f"%{search_value}%"
-        values.extend([sv, sv, sv])
+        # Filtering
+        where_clause = ""
+        values = []
+        if search_value:
+            # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
+            where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
+            sv = f"%{search_value}%"
+            values.extend([sv, sv, sv])
 
-    # Count filtered
-    count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
-    cur.execute(count_query, values)
-    filtered_records = cur.fetchone()[0]
+        # Count filtered
+        count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
+        cur.execute(count_query, values)
+        filtered_records = cur.fetchone()[0]
 
-    # Ordering & Pagination
-    order_sql = ""
-    if order_col:
-        # safety: order_col must be valid and from our whitelist
-        order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
-    limit_sql = " LIMIT %s OFFSET %s"
-    values.extend([length, start])
+        # Ordering & Pagination
+        order_sql = ""
+        if order_col:
+            # safety: order_col must be valid and from our whitelist
+            order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
+        limit_sql = " LIMIT %s OFFSET %s"
+        values.extend([length, start])
 
-    final_query = base_query + where_clause + order_sql + limit_sql
+        final_query = base_query + where_clause + order_sql + limit_sql
 
-    cur.execute(final_query, values)
-    rows = cur.fetchall()
+        cur.execute(final_query, values)
+        rows = cur.fetchall()
 
-    data = []
-    for row in rows:
-        rowd = row_to_dict(cur, row)
-        # Keep order consistent with DT_COLUMNS (so client can render columns easily)
-        data.append([rowd.get(c) for c in DT_COLUMNS.keys()])
+        data = []
+        for row in rows:
+            rowd = row_to_dict(cur, row)
+            # Keep order consistent with DT_COLUMNS (so client can render columns easily)
+            data.append([rowd.get(c) for c in DT_COLUMNS.keys()])
 
-    # Build response according to DataTables server-side spec
-    response = {
-        "draw": draw,
-        "recordsTotal": total_records,
-        "recordsFiltered": filtered_records,
-        "data": data
-    }
+        # Build response according to DataTables server-side spec
+        response = {
+            "draw": draw,
+            "recordsTotal": total_records,
+            "recordsFiltered": filtered_records,
+            "data": data
+        }
 
-    cur.close()
-    conn.close()
-    return jsonify(response)
+        cur.close()
+        conn.close()
+        return jsonify(response)
+        
+    except Exception as e:
+        # Return a DataTables-compatible error response
+        return jsonify({
+            "draw": int(request.values.get("draw", 1)),
+            "recordsTotal": 0,
+            "recordsFiltered": 0,
+            "data": [],
+            "error": f"Database error: {type(e).__name__}. Check that PostgreSQL is accessible."
+        }), 500
 
 @main.route("/download")
 def download():
-    conn = get_db_connection()
-    df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
-    conn.close()
-    file_path = "human_maturography_records.xlsx"
-    df.to_excel(file_path, index=False)
-    return send_file(file_path, as_attachment=True)
+    try:
+        conn = get_db_connection()
+        df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+        conn.close()
+        file_path = "human_maturography_records.xlsx"
+        df.to_excel(file_path, index=False)
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        return f"<div class='alert alert-danger'>Error: Could not download data. {type(e).__name__}: Database may not be accessible.</div>", 500
 
 
 if __name__ == "__main__":
