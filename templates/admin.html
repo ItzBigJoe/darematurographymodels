@@ -15,6 +15,9 @@
       {{ table_html|safe }}
     </div>    <div class="btn-group mt-4 flex-wrap justify-content-center">
       <a href="/download" class="btn btn-success">📊 Download as Excel</a>
+      <button id="undo-latest-btn" class="btn btn-info">↩️ Undo (<span id="undo-count">0</span>)</button>
+      <button id="clear-cache-btn" class="btn btn-warning">🧹 Clear All (cache)</button>
+      <button id="clear-all-remote-btn" class="btn btn-danger">🧨 Clear All (cache + remote)</button>
       <a href="/" class="btn btn-outline-secondary">🏠 Back to Calculator</a>
       <a href="/logout" class="btn btn-danger">🔓 Logout</a>
     </div>
@@ -30,6 +33,22 @@
     const contentWrapper = document.querySelector('.scale-wrapper');
     let scale = 1;
 
+    // Update undo button count
+    function updateUndoCount() {
+      fetch('/admin/undo_list').then(r => r.json()).then(res => {
+        document.getElementById('undo-count').textContent = res.count || 0;
+        const undoBtn = document.getElementById('undo-latest-btn');
+        if (res.count > 0) {
+          undoBtn.disabled = false;
+        } else {
+          undoBtn.disabled = true;
+        }
+      });
+    }
+
+    // Initialize undo count on page load
+    updateUndoCount();
+
     function zoomContent(factor) {
       scale *= factor;
       contentWrapper.style.transform = `scale(${scale})`;
@@ -39,6 +58,76 @@
     function resetZoom() {
       scale = 1;
       contentWrapper.style.transform = 'scale(1)';
+    }
+
+    // Attach delete handlers for dynamically generated Delete buttons
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.classList.contains('delete-row')) {
+        const cachedAt = e.target.getAttribute('data-cached-at');
+        if (!confirm('Delete this record from cache?')) return;
+        fetch('/admin/delete_row', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cached_at: cachedAt })
+        }).then(r => r.json()).then(res => {
+          if (res.success) {
+            updateUndoCount();
+            location.reload();
+          } else {
+            alert('Delete failed: ' + (res.error || 'unknown'));
+          }
+        }).catch(err => alert('Delete failed: ' + err));
+      }
+    });
+
+    // Undo latest deletion
+    const undoBtn = document.getElementById('undo-latest-btn');
+    if (undoBtn) {
+      undoBtn.addEventListener('click', function() {
+        if (!confirm('Restore the most recently deleted record?')) return;
+        fetch('/admin/undo_latest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        }).then(r => r.json()).then(res => {
+          if (res.success) {
+            updateUndoCount();
+            location.reload();
+          } else {
+            alert('Undo failed: ' + (res.error || 'unknown'));
+          }
+        }).catch(err => alert('Undo failed: ' + err));
+      });
+    }
+
+    // Clear cache (local only)
+    const clearBtn = document.getElementById('clear-cache-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        if (!confirm('Clear all cached records? This removes the local cached copy only.')) return;
+        fetch('/admin/clear_all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delete_remote: false })
+        }).then(r => r.json()).then(res => {
+          if (res.success) location.reload(); else alert('Clear failed: ' + (res.error || 'unknown'));
+        }).catch(err => alert('Clear failed: ' + err));
+      });
+    }
+
+    // Clear cache + remote
+    const clearRemoteBtn = document.getElementById('clear-all-remote-btn');
+    if (clearRemoteBtn) {
+      clearRemoteBtn.addEventListener('click', function() {
+        if (!confirm('This will remove all cached records AND delete all records from the remote database. Are you sure?')) return;
+        fetch('/admin/clear_all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delete_remote: true })
+        }).then(r => r.json()).then(res => {
+          if (res.success) location.reload(); else alert('Clear+Remote failed: ' + (res.error || 'unknown'));
+        }).catch(err => alert('Clear+Remote failed: ' + err));
+      });
     }
   </script>
 </body>

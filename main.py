@@ -16,8 +16,53 @@ import ssl
 from dotenv import load_dotenv
 
 load_dotenv()
+import datetime
+
+# Cache settings: keep an append-only CSV that mirrors submitted rows so the
+# admin view can be preserved even if the remote DB is deleted or unreachable.
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
+CACHE_FILE = os.path.join(CACHE_DIR, "human_maturography_records_cache.csv")
+
+# Undo queue: stores deleted rows so they can be recovered
+UNDO_QUEUE = []  # List of (timestamp, deleted_row_dict)
+MAX_UNDO_ITEMS = 50  # Keep last 50 deletions
 
 
+def push_undo(deleted_row_dict):
+    """Push a deleted row to the undo queue (FIFO-like, but pop from end)."""
+    global UNDO_QUEUE
+    UNDO_QUEUE.append((datetime.datetime.utcnow().isoformat(), deleted_row_dict))
+    if len(UNDO_QUEUE) > MAX_UNDO_ITEMS:
+        UNDO_QUEUE.pop(0)  # Remove oldest
+
+
+def pop_undo():
+    """Pop the most recently deleted row from the undo queue."""
+    global UNDO_QUEUE
+    if UNDO_QUEUE:
+        return UNDO_QUEUE.pop()  # Remove and return most recent
+    return None
+
+
+def get_undo_count():
+    """Return the number of items in the undo queue."""
+    return len(UNDO_QUEUE)
+
+
+def get_undo_list():
+    """Return the undo queue as a list for UI display."""
+    # Return as list of [timestamp, age/preview] for display
+    result = []
+    for ts, row in UNDO_QUEUE:
+        age = row.get("age", "N/A")
+        result.append({"timestamp": ts, "age": age})
+    return result
+
+
+def clear_undo_queue():
+    """Clear the undo queue."""
+    global UNDO_QUEUE
+    UNDO_QUEUE = []
 
 
 def get_db_connection():
@@ -416,54 +461,42 @@ def submit():
         # 🔥 FIXED: PostgreSQL uses %s placeholders, NOT ?
         # -----------------------------------------
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        # Map columns -> values so we can persist a local append-only cache
+        cols = get_all_columns()
+        if len(cols) != len(insert_data):
+            # Defensive check: if lengths mismatch, raise error to avoid corrupting cache
+            raise ValueError(f"Column/value length mismatch: {len(cols)} cols vs {len(insert_data)} values")
 
-        placeholders = ",".join(["%s"] * len(insert_data))
+        row_dict = dict(zip(cols, insert_data))
+        # Add metadata for local cache
+        row_dict["__cached_at"] = datetime.datetime.utcnow().isoformat()
+        row_dict["__synced"] = False
 
-        cur.execute(
-            f"INSERT INTO human_maturography_records ("
-            "age, marital_status, gender, occupation, education, "
-            + ",".join([
-                # Generate dynamic columns for 24 lustra × 7 columns
-                *(f"fg_{col}" for col in ["motor","language","interactions","emotional","curiosity","self_recognition","total"]),
-                *(f"sa_{col}" for col in ["friendships","rules","empathy","self_regulation","independence","hobbies","total"]),
-                *(f"id_{col}" for col in ["self_awareness","peer_interest","exploration","emotional_challenges","abstract_thinking","physical_changes","total"]),
-                *(f"ir_{col}" for col in ["independence","responsibility","vocational","values","relationships","longterm_planning","total"]),
-                *(f"cr_{col}" for col in ["transition_to_adult","focus_on_career","form_relationship","longterm_goals","manages_finances","explore_identity","total"]),
-                *(f"fa_{col}" for col in ["establish_family","career_advancement","financial_planning","work_life_balance","build_home_env","support_networks","total"]),
-                *(f"st_{col}" for col in ["stability_career","self_refinement","life_goal_adjustment","health_focus","work_life_balance","community_contribution","total"]),
-                *(f"ml_{col}" for col in ["reflect_achievements","adjust_goals","focus_purpose","meaningful_activities","strengthen_relationships","address_challenges","total"]),
-                *(f"er_{col}" for col in ["career_peak","mentorship_roles","children_focus","legacy_investment","community_service","balance_responsibilities","total"]),
-                *(f"sa_{col}" for col in ["nurtures_others","personal_goals","creative_interests","work_life_harmony","future_preparation","share_wisdom"]),
-                "sa2_total",
-                *(f"ws_{col}" for col in ["self_care","life_priority","mentoring_extensive","lifelong_learning","emotional_resilience","financial_planning","total"]),
-                *(f"pr_{col}" for col in ["lifestyle_adjustment","meaningful_activities","health_management","legacy_building","career_transition","retirement","total"]),
-                *(f"lr_{col}" for col in ["community_contribution","document_life","family_connections","reflect_achievements","social_engagement","emotional_stability","total"]),
-                *(f"em_{col}" for col in ["mental_wellbeing","gratitude","life_acceptance","simple_joy","positive_outlook","counsel_others","total"]),
-                *(f"wm_{col}" for col in ["offer_councel","find_peace","foster_resilience","shares_stories","spiritual_pursuits","meaningful_relationship","total"]),
-                *(f"ar_{col}" for col in ["adapts_to_health","strengthen_relationships","pass_on_traditions","life_reflection","resilience_aging","maintain_independence","total"]),
-                *(f"sr_{col}" for col in ["serenity_practices","life_reflection","family_milestones","quiet_pursuits","support_networks","sense_of_purpose","total"]),
-                *(f"lf_{col}" for col in ["storytelling","inspire_future","spiritual_beliefs","family_connections","focus_legacy","accept_assistance","total"]),
-                *(f"co_{col}" for col in ["inner_peace","simplicity","strengthen_bonds","express_gratitude","positive_memories","prioritize_wellbeing","total"]),
-                *(f"rs_{col}" for col in ["final_reflection","preserve_memories","support_systems","spiritual_closure","share_wisdom","end_of_life","total"]),
-                *(f"ex_{col}" for col in ["century_reflection","share_wisdom","family_unity","celebrate_centenarian","mental_engagement","historical_perspective","total"]),
-                *(f"pa_{col}" for col in ["life_stages","dignity","meaningful_connections","daily_comfort","caregivers","memories_solace","total"]),
-                *(f"gl_{col}" for col in ["celebrate_longevity","express_gratitude","foster_peace","appreciate_legacy","share_insights","grateful_mindset","total"]),
-                *(f"fm_{col}" for col in ["accept_life_cycle","pass_wisdom","find_closure","lifetime_reflection","support_system","final_peace","total"]),
-                "observed_lustrum", "observed_decade", "observed_generation", 
-                "observed_life_stage", "observed_human_maturogram",
-                "predicted_lustrum", "predicted_decade", "predicted_generation",
-                "predicted_life_stage", "predicted_human_maturogram",
-                "percentage_hm", "maturity_zone"
-            ]) +
-            ") VALUES (" + placeholders + ")",
-            insert_data
-        )
+        # Try to insert into the remote DB; mark synced True if successful
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            placeholders = ",".join(["%s"] * len(insert_data))
+            col_list_sql = ", ".join(cols)
+            cur.execute(
+                f"INSERT INTO human_maturography_records ({col_list_sql}) VALUES (" + placeholders + ")",
+                insert_data
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            row_dict["__synced"] = True
+        except Exception:
+            # Do not raise — we still want to cache the submission so admin view remains
+            row_dict["__synced"] = False
 
-        conn.commit()
-        cur.close()
-        conn.close()
+        # Append to local cache (append-only). This ensures admin always sees a full
+        # history even if the remote DB is later cleared.
+        try:
+            append_cache_row(row_dict)
+        except Exception as e:
+            # If cache append fails, return an error so the user can try again.
+            return f"<div class='alert alert-danger'>Error saving submission cache: {type(e).__name__}</div>"
 
         # Return HTML result box (include socio-demographic summary)
         socio = {
@@ -700,26 +733,115 @@ def row_to_dict(cur, row):
     return {desc[0]: row[idx] for idx, desc in enumerate(cur.description)} if hasattr(cur, 'description') else dict(row)
 
 
+def get_all_columns():
+    """Return the full ordered list of column names used in the INSERT and cache.
+    Must match the column order used by the SQL INSERT statement above.
+    """
+    cols = ["age", "marital_status", "gender", "occupation", "education"]
+
+    cols += [
+        *(f"fg_{col}" for col in ["motor","language","interactions","emotional","curiosity","self_recognition","total"]),
+        *(f"sa_{col}" for col in ["friendships","rules","empathy","self_regulation","independence","hobbies","total"]),
+        *(f"id_{col}" for col in ["self_awareness","peer_interest","exploration","emotional_challenges","abstract_thinking","physical_changes","total"]),
+        *(f"ir_{col}" for col in ["independence","responsibility","vocational","values","relationships","longterm_planning","total"]),
+        *(f"cr_{col}" for col in ["transition_to_adult","focus_on_career","form_relationship","longterm_goals","manages_finances","explore_identity","total"]),
+        *(f"fa_{col}" for col in ["establish_family","career_advancement","financial_planning","work_life_balance","build_home_env","support_networks","total"]),
+        *(f"st_{col}" for col in ["stability_career","self_refinement","life_goal_adjustment","health_focus","work_life_balance","community_contribution","total"]),
+        *(f"ml_{col}" for col in ["reflect_achievements","adjust_goals","focus_purpose","meaningful_activities","strengthen_relationships","address_challenges","total"]),
+        *(f"er_{col}" for col in ["career_peak","mentorship_roles","children_focus","legacy_investment","community_service","balance_responsibilities","total"]),
+        *(f"sa_{col}" for col in ["nurtures_others","personal_goals","creative_interests","work_life_harmony","future_preparation","share_wisdom"]),
+        "sa2_total",
+        *(f"ws_{col}" for col in ["self_care","life_priority","mentoring_extensive","lifelong_learning","emotional_resilience","financial_planning","total"]),
+        *(f"pr_{col}" for col in ["lifestyle_adjustment","meaningful_activities","health_management","legacy_building","career_transition","retirement","total"]),
+        *(f"lr_{col}" for col in ["community_contribution","document_life","family_connections","reflect_achievements","social_engagement","emotional_stability","total"]),
+        *(f"em_{col}" for col in ["mental_wellbeing","gratitude","life_acceptance","simple_joy","positive_outlook","counsel_others","total"]),
+        *(f"wm_{col}" for col in ["offer_councel","find_peace","foster_resilience","shares_stories","spiritual_pursuits","meaningful_relationship","total"]),
+        *(f"ar_{col}" for col in ["adapts_to_health","strengthen_relationships","pass_on_traditions","life_reflection","resilience_aging","maintain_independence","total"]),
+        *(f"sr_{col}" for col in ["serenity_practices","life_reflection","family_milestones","quiet_pursuits","support_networks","sense_of_purpose","total"]),
+        *(f"lf_{col}" for col in ["storytelling","inspire_future","spiritual_beliefs","family_connections","focus_legacy","accept_assistance","total"]),
+        *(f"co_{col}" for col in ["inner_peace","simplicity","strengthen_bonds","express_gratitude","positive_memories","prioritize_wellbeing","total"]),
+        *(f"rs_{col}" for col in ["final_reflection","preserve_memories","support_systems","spiritual_closure","share_wisdom","end_of_life","total"]),
+        *(f"ex_{col}" for col in ["century_reflection","share_wisdom","family_unity","celebrate_centenarian","mental_engagement","historical_perspective","total"]),
+        *(f"pa_{col}" for col in ["life_stages","dignity","meaningful_connections","daily_comfort","caregivers","memories_solace","total"]),
+        *(f"gl_{col}" for col in ["celebrate_longevity","express_gratitude","foster_peace","appreciate_legacy","share_insights","grateful_mindset","total"]),
+        *(f"fm_{col}" for col in ["accept_life_cycle","pass_wisdom","find_closure","lifetime_reflection","support_system","final_peace","total"]),
+    ]
+
+    cols += [
+        "observed_lustrum", "observed_decade", "observed_generation",
+        "observed_life_stage", "observed_human_maturogram",
+        "predicted_lustrum", "predicted_decade", "predicted_generation",
+        "predicted_life_stage", "predicted_human_maturogram",
+        "percentage_hm", "maturity_zone"
+    ]
+
+    return cols
+
+
+def append_cache_row(row_dict):
+    """Append a single row (mapping col->value) to the CSV cache.
+    The cache is append-only so admin display remains intact even if DB rows
+    are later removed.
+    """
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    import pandas as _pd
+    df_row = _pd.DataFrame([row_dict])
+    write_header = not os.path.exists(CACHE_FILE)
+    df_row.to_csv(CACHE_FILE, mode="a", index=False, header=write_header)
+
+
+def load_cache_df():
+    import pandas as _pd
+    if os.path.exists(CACHE_FILE):
+        try:
+            df = _pd.read_csv(CACHE_FILE)
+            return df
+        except Exception:
+            return _pd.DataFrame()
+    return _pd.DataFrame()
+
+
 @main.route("/admin")
 @admin_required
 def admin():
-    # Try to load records and render a table on the admin page.
+    # Prefer the local append-only cache for admin display so the admin view remains
+    # stable even if the remote DB is cleared. If cache doesn't exist, fall back
+    # to reading the remote DB and seed the cache.
     try:
-        conn = get_db_connection()
-        try:
-            df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
-        finally:
-            conn.close()
+        df = load_cache_df()
+
+        if df.empty:
+            # Try to seed cache from DB if available
+            try:
+                conn = get_db_connection()
+                try:
+                    df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+                finally:
+                    conn.close()
+                # Save full DB snapshot to cache for future admin views
+                if not df.empty:
+                    os.makedirs(CACHE_DIR, exist_ok=True)
+                    df.to_csv(CACHE_FILE, index=False)
+            except Exception:
+                # Leave df as empty DataFrame
+                df = pd.DataFrame()
 
         if df.empty:
             table_html = "<p class='text-center text-muted'>No records available.</p>"
         else:
-            # Rename columns for display
+            # Ensure all DT_COLUMNS exist in df (missing columns => show blank)
+            for c in DT_COLUMNS.keys():
+                if c not in df.columns:
+                    df[c] = None
             df_display = df.rename(columns=DT_COLUMNS)
+            # Ensure a cache identifier exists for each row (used for delete operations)
+            if "__cached_at" not in df.columns:
+                df["__cached_at"] = df.apply(lambda r: f"db_{r.get('id','')}_{datetime.datetime.utcnow().timestamp()}", axis=1)
+            # Add Actions column with Delete button (HTML); escape=False below allows HTML.
+            df_display["Actions"] = df["__cached_at"].apply(lambda ts: f"<button class='btn btn-sm btn-danger delete-row' data-cached-at=\"{ts}\">Delete</button>")
             table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)
 
     except Exception as e:
-        # If DB not available or query fails, show a friendly message and allow admin_data AJAX to be used.
         table_html = f"<div class='alert alert-warning'>Unable to load records: {type(e).__name__}.</div>"
 
     return render_template("admin.html", table_html=table_html)
@@ -744,57 +866,61 @@ def admin_data():
         if order_col_index is not None:
             try:
                 order_col_index = int(order_col_index)
-                # Map index to column name as we send DT_COLUMNS to the client in same order
                 col_names = list(DT_COLUMNS.keys())
                 if 0 <= order_col_index < len(col_names):
                     order_col = col_names[order_col_index]
             except:
                 order_col = None
 
-        # Build base query
-        select_cols = ", ".join(DT_COLUMNS.keys())
-        base_query = f"SELECT {select_cols} FROM human_maturography_records"
+        # Load cache first
+        df = load_cache_df()
 
-        # Count total records
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(1) FROM human_maturography_records")
-        total_records = cur.fetchone()[0]
+        # If cache is empty, attempt to read DB and seed cache (best-effort)
+        if df.empty:
+            try:
+                conn = get_db_connection()
+                try:
+                    df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+                finally:
+                    conn.close()
+                if not df.empty:
+                    os.makedirs(CACHE_DIR, exist_ok=True)
+                    df.to_csv(CACHE_FILE, index=False)
+            except Exception:
+                df = pd.DataFrame()
 
-        # Filtering
-        where_clause = ""
-        values = []
+        # Ensure DT_COLUMNS exist on df
+        for c in DT_COLUMNS.keys():
+            if c not in df.columns:
+                df[c] = None
+
+        total_records = len(df)
+
+        # Filtering (search on a few meaningful columns)
         if search_value:
-            # we'll search a few meaningful columns (age, maturity_zone, percentage_hm)
-            where_clause = " WHERE (CAST(age AS TEXT) ILIKE %s OR maturity_zone ILIKE %s OR CAST(percentage_hm AS TEXT) ILIKE %s)"
-            sv = f"%{search_value}%"
-            values.extend([sv, sv, sv])
+            sv = search_value.lower()
+            mask = (
+                df["age"].astype(str).str.contains(sv, case=False, na=False) |
+                df["maturity_zone"].astype(str).str.contains(sv, case=False, na=False) |
+                df["percentage_hm"].astype(str).str.contains(sv, case=False, na=False)
+            )
+            df_filtered = df[mask]
+        else:
+            df_filtered = df
 
-        # Count filtered
-        count_query = "SELECT COUNT(1) FROM human_maturography_records" + where_clause
-        cur.execute(count_query, values)
-        filtered_records = cur.fetchone()[0]
+        filtered_records = len(df_filtered)
 
-        # Ordering & Pagination
-        order_sql = ""
-        if order_col:
-            # safety: order_col must be valid and from our whitelist
-            order_sql = f" ORDER BY {order_col} {'DESC' if order_col_dir == 'desc' else 'ASC'}"
-        limit_sql = " LIMIT %s OFFSET %s"
-        values.extend([length, start])
+        # Ordering
+        if order_col and order_col in df_filtered.columns:
+            df_filtered = df_filtered.sort_values(by=order_col, ascending=(order_col_dir != "desc"))
 
-        final_query = base_query + where_clause + order_sql + limit_sql
-
-        cur.execute(final_query, values)
-        rows = cur.fetchall()
+        # Pagination
+        df_page = df_filtered.iloc[start:start+length]
 
         data = []
-        for row in rows:
-            rowd = row_to_dict(cur, row)
-            # Keep order consistent with DT_COLUMNS (so client can render columns easily)
-            data.append([rowd.get(c) for c in DT_COLUMNS.keys()])
+        for _, r in df_page.iterrows():
+            data.append([r.get(c) for c in DT_COLUMNS.keys()])
 
-        # Build response according to DataTables server-side spec
         response = {
             "draw": draw,
             "recordsTotal": total_records,
@@ -802,10 +928,8 @@ def admin_data():
             "data": data
         }
 
-        cur.close()
-        conn.close()
         return jsonify(response)
-        
+
     except Exception as e:
         # Return a DataTables-compatible error response
         return jsonify({
@@ -813,8 +937,134 @@ def admin_data():
             "recordsTotal": 0,
             "recordsFiltered": 0,
             "data": [],
-            "error": f"Database error: {type(e).__name__}. Check that PostgreSQL is accessible."
+            "error": f"Cache/Database error: {type(e).__name__}."
         }), 500
+
+@main.route("/admin/delete_row", methods=["POST"])
+@admin_required
+def admin_delete_row():
+    """Delete a single cached row (and attempt to delete the remote DB row if it has an `id`).
+    Expects JSON `{'cached_at': '<identifier>'}`.
+    """
+    data = request.get_json(silent=True) or {}
+    cached_at = data.get("cached_at")
+    if not cached_at:
+        return jsonify({"success": False, "error": "cached_at required"}), 400
+
+    df = load_cache_df()
+    if df.empty:
+        return jsonify({"success": False, "error": "cache empty"}), 404
+
+    # Find matching rows
+    mask = df.get("__cached_at") == cached_at
+    if not mask.any():
+        return jsonify({"success": False, "error": "row not found"}), 404
+
+    row = df.loc[mask].iloc[0]
+
+    # Push to undo queue before deletion
+    push_undo(row.to_dict())
+
+    # If the row has a remote DB id, attempt to delete it there too (best-effort)
+    try:
+        remote_id = None
+        if "id" in df.columns and pd.notnull(row.get("id")):
+            try:
+                remote_id = int(row.get("id"))
+            except Exception:
+                remote_id = None
+        if remote_id is not None:
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute("DELETE FROM human_maturography_records WHERE id=%s", [remote_id])
+                conn.commit()
+                cur.close()
+                conn.close()
+            except Exception:
+                # ignore remote deletion errors
+                pass
+    except Exception:
+        pass
+
+    # Remove from cache and write back
+    try:
+        df2 = df.loc[~mask]
+        if df2.empty:
+            # remove file
+            try:
+                os.remove(CACHE_FILE)
+            except Exception:
+                pass
+        else:
+            df2.to_csv(CACHE_FILE, index=False)
+        return jsonify({"success": True, "undo_count": get_undo_count()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@main.route("/admin/clear_all", methods=["POST"])
+@admin_required
+def admin_clear_all():
+    """Clear the local cache; optionally delete remote DB rows when `delete_remote` is true.
+    Expects JSON `{ "delete_remote": true|false }`.
+    """
+    data = request.get_json(silent=True) or {}
+    delete_remote = bool(data.get("delete_remote", False))
+    # Delete cache file
+    try:
+        if os.path.exists(CACHE_FILE):
+            os.remove(CACHE_FILE)
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Could not remove cache: {e}"}), 500
+
+    if delete_remote:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM human_maturography_records")
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Remote deletion failed: {type(e).__name__}"}), 500
+
+    return jsonify({"success": True})
+
+
+@main.route("/admin/undo_list", methods=["GET"])
+@admin_required
+def admin_undo_list():
+    """Return the list of undoable deletions."""
+    undo_items = get_undo_list()
+    return jsonify({"count": get_undo_count(), "items": undo_items})
+
+
+@main.route("/admin/undo_latest", methods=["POST"])
+@admin_required
+def admin_undo_latest():
+    """Restore the most recently deleted row."""
+    deleted_row = pop_undo()
+    if deleted_row is None:
+        return jsonify({"success": False, "error": "nothing to undo"}), 400
+
+    # Re-append to cache
+    try:
+        append_cache_row(deleted_row)
+        return jsonify({"success": True, "undo_count": get_undo_count()})
+    except Exception as e:
+        # Push it back if we failed
+        push_undo(deleted_row)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@main.route("/admin/undo_clear", methods=["POST"])
+@admin_required
+def admin_undo_clear():
+    """Clear the undo queue (removes ability to undo past deletions)."""
+    clear_undo_queue()
+    return jsonify({"success": True})
+
 
 @main.route("/download")
 def download():
