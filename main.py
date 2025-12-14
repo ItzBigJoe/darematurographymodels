@@ -9,8 +9,7 @@ main.secret_key = "your_super_secret_key"  # Change this to a secure random key
 main.permanent_session_lifetime = timedelta(minutes=30)
 
 # ------------------ DATABASE CONNECTION ------------------
-import psycopg2
-import psycopg2.extras
+import pg8000.native
 import os
 from dotenv import load_dotenv
 
@@ -20,12 +19,12 @@ load_dotenv()
 
 
 def get_db_connection():
-    conn = psycopg2.connect(
+    conn = pg8000.native.connect(
         host=os.getenv("DB_HOST"),
         database=os.getenv("DB_NAME"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        port=os.getenv("DB_PORT")
+        port=int(os.getenv("DB_PORT", 5432))
     )
     return conn
 
