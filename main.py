@@ -9,7 +9,7 @@ main.secret_key = "your_super_secret_key"  # Change this to a secure random key
 main.permanent_session_lifetime = timedelta(minutes=30)
 
 # ------------------ DATABASE CONNECTION ------------------
-import pg8000.native
+import pg8000.dbapi
 import os
 from dotenv import load_dotenv
 
@@ -19,12 +19,13 @@ load_dotenv()
 
 
 def get_db_connection():
-    conn = pg8000.native.connect(
+    conn = pg8000.dbapi.connect(
         host=os.getenv("DB_HOST"),
         database=os.getenv("DB_NAME"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        port=int(os.getenv("DB_PORT", 5432))
+        port=int(os.getenv("DB_PORT", 5432)),
+        ssl={"mode": "require"}  # Enable SSL for Render PostgreSQL
     )
     return conn
 
