@@ -211,6 +211,10 @@
           </div>
         </div>
         {% endfor %}
+        <div class="text-center mt-4 mb-3 form-footer">
+        <small class="text-muted">Form built by <strong>ItzBigJoe</strong></small>
+      </div>
+
 
       </form>
 
@@ -263,6 +267,7 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
     let currentPage = 1;
+
     function showPage(n) {
       document.querySelectorAll('.form-page').forEach(p => p.style.display = 'none');
       document.getElementById(`page-${n}`).style.display = 'block';
@@ -270,17 +275,42 @@
     }
 
     function nextPage() {
-      if (currentPage < document.querySelectorAll('.form-page').length) {
+      const pages = document.querySelectorAll('.form-page');
+
+      // Check required fields only on the first page (socio-demography)
+      if (currentPage === 1) {
+        const firstPageFields = pages[0].querySelectorAll('input[required], select[required]');
+        let allFilled = true;
+
+        firstPageFields.forEach(field => {
+          if (!field.value) {
+            allFilled = false;
+            field.classList.add('is-invalid'); // highlight empty field
+          } else {
+            field.classList.remove('is-invalid');
+          }
+        });
+
+        if (!allFilled) {
+          alert("Please fill out all required fields before proceeding.");
+          return; // stop moving to next page
+        }
+      }
+
+      if (currentPage < pages.length) {
         currentPage++;
         showPage(currentPage);
       }
     }
+
     function prevPage() {
       if (currentPage > 1) {
         currentPage--;
         showPage(currentPage);
       }
     }
+
+    
 
   </script>
 </body>

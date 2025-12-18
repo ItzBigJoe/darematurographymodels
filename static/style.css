@@ -129,4 +129,17 @@ body {
     width: 100%;
     margin-bottom: 10px;
   }
+  .form-footer-fixed {
+    position: fixed;
+    bottom: 10px;       /* distance from bottom */
+    right: 10px;        /* distance from right */
+    font-size: 0.85rem; /* smaller text */
+    color: #6c757d;     /* subtle grey */
+    z-index: 9999;      /* make sure it stays on top */
+  }
+
+  .form-footer-fixed strong {
+    color: #007bff;     /* highlight your name in blue */
+  }
+
 }
