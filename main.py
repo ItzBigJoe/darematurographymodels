@@ -24,6 +24,9 @@ import datetime
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 CACHE_FILE = os.path.join(CACHE_DIR, "human_maturography_records_cache.csv")
 
+# Local SQLite database for local data storage (independent of remote PostgreSQL)
+LOCAL_DB_PATH = os.path.join(os.path.dirname(__file__), "local_maturography.db")
+
 # Undo queue: stores deleted rows so they can be recovered
 UNDO_QUEUE = []  # List of (timestamp, deleted_row_dict)
 MAX_UNDO_ITEMS = 50  # Keep last 50 deletions
@@ -64,6 +67,102 @@ def clear_undo_queue():
     """Clear the undo queue."""
     global UNDO_QUEUE
     UNDO_QUEUE = []
+
+
+def init_local_db():
+    """Initialize the local SQLite database with the same schema as PostgreSQL."""
+    conn = sqlite3.connect(LOCAL_DB_PATH)
+    cur = conn.cursor()
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS human_maturography_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            age INTEGER,
+            marital_status TEXT,
+            gender TEXT,
+            occupation TEXT,
+            education TEXT,
+            fg_motor INTEGER, fg_language INTEGER, fg_interactions INTEGER, fg_emotional INTEGER,
+            fg_curiosity INTEGER, fg_self_recognition INTEGER, fg_total INTEGER,
+            sa_friendships INTEGER, sa_rules INTEGER, sa_empathy INTEGER, sa_self_regulation INTEGER,
+            sa_independence INTEGER, sa_hobbies INTEGER, sa_total INTEGER,
+            id_self_awareness INTEGER, id_peer_interest INTEGER, id_exploration INTEGER,
+            id_emotional_challenges INTEGER, id_abstract_thinking INTEGER, id_physical_changes INTEGER, id_total INTEGER,
+            ir_independence INTEGER, ir_responsibility INTEGER, ir_vocational INTEGER,
+            ir_values INTEGER, ir_relationships INTEGER, ir_longterm_planning INTEGER, ir_total INTEGER,
+            cr_transition_to_adult INTEGER, cr_focus_on_career INTEGER, cr_form_relationship INTEGER,
+            cr_longterm_goals INTEGER, cr_manages_finances INTEGER, cr_explore_identity INTEGER, cr_total INTEGER,
+            fa_establish_family INTEGER, fa_career_advancement INTEGER, fa_financial_planning INTEGER,
+            fa_work_life_balance INTEGER, fa_build_home_env INTEGER, fa_support_networks INTEGER, fa_total INTEGER,
+            st_stability_career INTEGER, st_self_refinement INTEGER, st_life_goal_adjustment INTEGER,
+            st_health_focus INTEGER, st_work_life_balance INTEGER, st_community_contribution INTEGER, st_total INTEGER,
+            ml_reflect_achievements INTEGER, ml_adjust_goals INTEGER, ml_focus_purpose INTEGER,
+            ml_meaningful_activities INTEGER, ml_strengthen_relationships INTEGER, ml_address_challenges INTEGER, ml_total INTEGER,
+            er_career_peak INTEGER, er_mentorship_roles INTEGER, er_children_focus INTEGER,
+            er_legacy_investment INTEGER, er_community_service INTEGER, er_balance_responsibilities INTEGER, er_self_reflection INTEGER, er_total INTEGER,
+            sa_nurtures_others INTEGER, sa_personal_goals INTEGER, sa_creative_interests INTEGER,
+            sa_work_life_harmony INTEGER, sa_future_preparation INTEGER, sa_share_wisdom INTEGER, sa2_total INTEGER,
+            ws_self_care INTEGER, ws_life_priority INTEGER, ws_mentoring_extensive INTEGER,
+            ws_lifelong_learning INTEGER, ws_emotional_resilience INTEGER, ws_financial_planning INTEGER, ws_total INTEGER,
+            pr_lifestyle_adjustment INTEGER, pr_meaningful_activities INTEGER, pr_health_management INTEGER,
+            pr_legacy_building INTEGER, pr_career_transition INTEGER, pr_retirement INTEGER, pr_total INTEGER,
+            lr_community_contribution INTEGER, lr_document_life INTEGER, lr_family_connections INTEGER,
+            lr_reflect_achievements INTEGER, lr_social_engagement INTEGER, lr_emotional_stability INTEGER, lr_total INTEGER,
+            em_mental_wellbeing INTEGER, em_gratitude INTEGER, em_life_acceptance INTEGER,
+            em_simple_joy INTEGER, em_positive_outlook INTEGER, em_counsel_others INTEGER, em_total INTEGER,
+            wm_offer_councel INTEGER, wm_find_peace INTEGER, wm_foster_resilience INTEGER,
+            wm_shares_stories INTEGER, wm_spiritual_pursuits INTEGER, wm_meaningful_relationship INTEGER, wm_total INTEGER,
+            ar_adapts_to_health INTEGER, ar_strengthen_relationships INTEGER, ar_pass_on_traditions INTEGER,
+            ar_life_reflection INTEGER, ar_resilience_aging INTEGER, ar_maintain_independence INTEGER, ar_total INTEGER,
+            sr_serenity_practices INTEGER, sr_life_reflection INTEGER, sr_family_milestones INTEGER,
+            sr_quiet_pursuits INTEGER, sr_support_networks INTEGER, sr_sense_of_purpose INTEGER, sr_total INTEGER,
+            lf_storytelling INTEGER, lf_inspire_future INTEGER, lf_spiritual_beliefs INTEGER,
+            lf_family_connections INTEGER, lf_focus_legacy INTEGER, lf_accept_assistance INTEGER, lf_total INTEGER,
+            co_inner_peace INTEGER, co_simplicity INTEGER, co_strengthen_bonds INTEGER,
+            co_express_gratitude INTEGER, co_positive_memories INTEGER, co_prioritize_wellbeing INTEGER, co_total INTEGER,
+            rs_final_reflection INTEGER, rs_preserve_memories INTEGER, rs_support_systems INTEGER,
+            rs_spiritual_closure INTEGER, rs_share_wisdom INTEGER, rs_end_of_life INTEGER, rs_total INTEGER,
+            ex_century_reflection INTEGER, ex_share_wisdom INTEGER, ex_family_unity INTEGER,
+            ex_celebrate_centenarian INTEGER, ex_mental_engagement INTEGER, ex_historical_perspective INTEGER, ex_total INTEGER,
+            pa_life_stages INTEGER, pa_dignity INTEGER, pa_meaningful_connections INTEGER,
+            pa_daily_comfort INTEGER, pa_caregivers INTEGER, pa_memories_solace INTEGER, pa_total INTEGER,
+            gl_celebrate_longevity INTEGER, gl_express_gratitude INTEGER, gl_foster_peace INTEGER,
+            gl_appreciate_legacy INTEGER, gl_share_insights INTEGER, gl_grateful_mindset INTEGER, gl_total INTEGER,
+            fm_accept_life_cycle INTEGER, fm_pass_wisdom INTEGER, fm_find_closure INTEGER,
+            fm_lifetime_reflection INTEGER, fm_support_system INTEGER, fm_final_peace INTEGER, fm_total INTEGER,
+            observed_lustrum REAL, observed_decade REAL, observed_generation REAL,
+            observed_life_stage REAL, observed_human_maturogram REAL,
+            predicted_lustrum REAL, predicted_decade REAL, predicted_generation REAL,
+            predicted_life_stage REAL, predicted_human_maturogram REAL,
+            percentage_hm REAL, maturity_zone TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def insert_to_local_db(insert_data, cols):
+    """Insert a record into the local SQLite database."""
+    try:
+        conn = sqlite3.connect(LOCAL_DB_PATH)
+        cur = conn.cursor()
+        placeholders = ",".join(["?"]*len(insert_data))
+        col_list = ", ".join(cols)
+        cur.execute(
+            f"INSERT INTO human_maturography_records ({col_list}) VALUES ({placeholders})",
+            insert_data
+        )
+        conn.commit()
+        local_id = cur.lastrowid
+        cur.close()
+        conn.close()
+        return local_id
+    except Exception as e:
+        print(f"Local DB insert failed: {type(e).__name__}: {e}")
+        return None
 
 
 def get_db_connection():
@@ -163,7 +262,15 @@ def init_db():
     conn.close()
 
 
-# Initialize DB only when a remote DB is configured. This avoids
+# Initialize local SQLite database (always available)
+try:
+    init_local_db()
+    print("[OK] Local SQLite database initialized successfully")
+except Exception as e:
+    print(f"[WARN] Local SQLite initialization failed: {type(e).__name__}")
+    print("       App may not function properly")
+
+# Initialize remote PostgreSQL DB only when a remote DB is configured. This avoids
 # attempting to resolve the remote host during local development
 # (which can trigger getaddrinfo/socket errors).
 if os.getenv("DB_HOST"):
@@ -171,15 +278,15 @@ if os.getenv("DB_HOST"):
     socket.setdefaulttimeout(2)
     try:
         init_db()
-        print("✓ Database initialized successfully")
+        print("[OK] Remote PostgreSQL database initialized successfully")
     except Exception as e:
         # Do not crash startup on DB init failure; surface a helpful message.
-        print(f"⚠️  Database initialization failed: {type(e).__name__}")
-        print("   App will run without database (queries will fail)")
+        print(f"[WARN] Remote PostgreSQL initialization failed: {type(e).__name__}")
+        print("       App will use local SQLite only")
     finally:
         socket.setdefaulttimeout(None)  # Reset to default
 else:
-    print("ℹ️  DB_HOST not configured — running in dev mode")
+    print("[INFO] DB_HOST not configured — using local SQLite only")
 
 # ------------------ GLOBAL DATA ------------------
 focus_texts = [
@@ -471,9 +578,15 @@ def submit():
         row_dict = dict(zip(cols, insert_data))
         # Add metadata for local cache
         row_dict["__cached_at"] = datetime.datetime.utcnow().isoformat()
-        row_dict["__synced"] = False
 
-        # Try to insert into the remote DB; mark synced True if successful
+        # Insert into local SQLite database (always attempted)
+        local_id = None
+        try:
+            local_id = insert_to_local_db(insert_data, cols)
+        except Exception as e:
+            print(f"Local DB insert error: {e}")
+
+        # Try to insert into the remote PostgreSQL DB (best-effort, optional)
         try:
             conn = get_db_connection()
             cur = conn.cursor()
@@ -486,10 +599,9 @@ def submit():
             conn.commit()
             cur.close()
             conn.close()
-            row_dict["__synced"] = True
         except Exception:
             # Do not raise — we still want to cache the submission so admin view remains
-            row_dict["__synced"] = False
+            pass
 
         # Append to local cache (append-only). This ensures admin always sees a full
         # history even if the remote DB is later cleared.
@@ -617,7 +729,6 @@ DT_COLUMNS = {
     "er_legacy_investment": "Expanded Responsibility: Invests in future legacy",
     "er_community_service": "Expanded Responsibility: Engages actively in community service",
     "er_balance_responsibilities": "Expanded Responsibility: Balances expanded responsibilities",
-    "er_self_reflection": "Expanded Responsibility: Recognizes personal strengths through self-reflection",
     "er_total": "Expanded Responsibility: Total",
     # Self-Actualization
     "sa_nurtures_others": "Self-Actualization: Nurtures younger generations",
@@ -1113,14 +1224,19 @@ def admin_undo_clear():
 @main.route("/download")
 def download():
     try:
-        conn = get_db_connection()
+        # Download from local SQLite database
+        conn = sqlite3.connect(LOCAL_DB_PATH)
         df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
         conn.close()
+        
+        if df.empty:
+            return f"<div class='alert alert-warning'>No local data available to download.</div>", 400
+        
         file_path = "human_maturography_records.xlsx"
         df.to_excel(file_path, index=False)
         return send_file(file_path, as_attachment=True)
     except Exception as e:
-        return f"<div class='alert alert-danger'>Error: Could not download data. {type(e).__name__}: Database may not be accessible.</div>", 500
+        return f"<div class='alert alert-danger'>Error: Could not download data. {type(e).__name__}: {str(e)}</div>", 500
 
 
 if __name__ == "__main__":
