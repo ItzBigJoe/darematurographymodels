@@ -1224,13 +1224,28 @@ def admin_undo_clear():
 @main.route("/download")
 def download():
     try:
-        # Download from local SQLite database
-        conn = sqlite3.connect(LOCAL_DB_PATH)
-        df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
-        conn.close()
+        # Download from PostgreSQL if DB_HOST is configured (running globally on Render),
+        # otherwise fall back to local SQLite database
+        if os.getenv("DB_HOST"):
+            # Running globally - download from PostgreSQL
+            try:
+                conn = get_db_connection()
+                df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+                conn.close()
+            except Exception as e:
+                # Fall back to SQLite if PostgreSQL fails
+                print(f"PostgreSQL download failed: {e}, falling back to SQLite")
+                conn = sqlite3.connect(LOCAL_DB_PATH)
+                df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+                conn.close()
+        else:
+            # Running locally - download from SQLite
+            conn = sqlite3.connect(LOCAL_DB_PATH)
+            df = pd.read_sql_query("SELECT * FROM human_maturography_records", conn)
+            conn.close()
         
         if df.empty:
-            return f"<div class='alert alert-warning'>No local data available to download.</div>", 400
+            return f"<div class='alert alert-warning'>No data available to download.</div>", 400
         
         file_path = "human_maturography_records.xlsx"
         df.to_excel(file_path, index=False)
