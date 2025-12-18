@@ -4,6 +4,7 @@ import pandas as pd
 from maturography import MaturographyCalculator
 from datetime import timedelta
 import socket
+import json
 
 main = Flask(__name__)
 main.secret_key = "your_super_secret_key"  # Change this to a secure random key
@@ -506,10 +507,35 @@ def submit():
             "occupation": occupation,
             "education": education
         }
-        return render_template("result_snippet.html", result=result, socio=socio)
+
+        # Save result to session and redirect to the full result page
+        try:
+            session['last_result'] = json.dumps(result)
+            session['last_socio'] = json.dumps(socio)
+        except Exception:
+            # If session storage fails, fall back to rendering the snippet directly
+            return render_template("result_snippet.html", result=result, socio=socio)
+
+        return redirect(url_for('result_page'))
 
     except Exception as e:
         return f"<div class='alert alert-danger'>Error: {str(e)}</div>"
+
+
+@main.route('/result')
+def result_page():
+    """Render the full result page using the last submission stored in session."""
+    res_js = session.get('last_result')
+    socio_js = session.get('last_socio')
+    if not res_js or not socio_js:
+        return redirect(url_for('index'))
+    try:
+        result = json.loads(res_js)
+        socio = json.loads(socio_js)
+    except Exception:
+        return redirect(url_for('index'))
+
+    return render_template('result_page.html', result=result, socio=socio)
 
 
 # Build a column mapping for all columns (defined once at module level)

@@ -21,7 +21,7 @@ h2, h3, h4 {
 }
 
 .table th {
-  background-color: #1a6cff !important;
+  background-color: #7d9edb !important;
   color: #fff !important;
   font-size: 0.85rem;
 }
@@ -60,6 +60,9 @@ h2, h3, h4 {
   display: flex;
   flex-direction: column;
   z-index: 999;
+}
+.Note {
+color: #ff1a22;
 }
 
 .zoom-controls button {

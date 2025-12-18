@@ -1,23 +1,99 @@
+{% macro ordinal(n) %}
+  {{ n }}
+  {% if n % 100 in [11, 12, 13] %}
+    th
+  {% elif n % 10 == 1 %}
+    st
+  {% elif n % 10 == 2 %}
+    nd
+  {% elif n % 10 == 3 %}
+    rd
+  {% else %}
+    th
+  {% endif %}
+{% endmacro %}
+
 <div class="alert alert-info mt-4">
   <h5 class="fw-bold">Results Summary</h5>
-  <p><strong>Age:</strong> {{ socio.age }}</p>
-  <p><strong>Marital Status:</strong> {{ socio.marital_status or '—' }}</p>
-  <p><strong>Gender:</strong> {{ socio.gender or '—' }}</p>
-  <p><strong>Occupation:</strong> {{ socio.occupation or '—' }}</p>
-  <p><strong>Highest Education:</strong> {{ socio.education or '—' }}</p>
+
+  <p>
+    From your responses, you are currently
+    <strong>{{ socio.age }}</strong> years old.
+    Ideally, you are supposed to be in the
+    <strong>{{ ordinal(result.Predicted.a_phm) }}</strong> lustrum,
+    <strong>{{ ordinal(result.Predicted.b_phm) }}</strong> decade,
+    <strong>{{ ordinal(result.Predicted.c_phm) }}</strong> generation,
+    and the
+    <strong>{{ ordinal(result.Predicted.d_phm) }}</strong> stage of your life.
+  </p>
+
+  <p>
+    Based on further responses, it is observed that you are presently in the
+    <strong>{{ ordinal(result.Observed.a_ohm) }}</strong> lustrum,
+    <strong>{{ ordinal(result.Observed.b_ohm) }}</strong> decade,
+    <strong>{{ ordinal(result.Observed.c_ohm) }}</strong> generation,
+    and the
+    <strong>{{ ordinal(result.Observed.d_ohm) }}</strong> stage of your life.
+  </p>
+
+  <p>
+    This implies that you are currently within the
+    <span class="badge bg-primary">{{ result.zone }}</span>.
+  </p>
+
+  {% set zone_class = "" %}
+  {% if result.zone == "Violet Zone (Cosmetic Maturity)" %}
+    {% set zone_class = "zone-violet" %}
+  {% elif result.zone == "Red Zone (Formative Maturity)" %}
+    {% set zone_class = "zone-red" %}
+  {% elif result.zone == "Blue Zone (Transcendent Maturity)" %}
+    {% set zone_class = "zone-blue" %}
+  {% elif result.zone == "Green Zone (Fulfilled Maturity)" %}
+    {% set zone_class = "zone-green" %}
+  {% elif result.zone == "Yellow Zone (Functional Maturity)" %}
+    {% set zone_class = "zone-yellow" %}
+  {% endif %}
+
   <hr>
-  <p><strong>Observed Lustrum:</strong> {{ result.Observed.a_ohm }}</p>
-  <p><strong>Observed Decade:</strong> {{ result.Observed.b_ohm }}</p>
-  <p><strong>Observed Generation:</strong> {{ result.Observed.c_ohm }}</p>
-  <p><strong>Observed Life Stage:</strong> {{ result.Observed.d_ohm }}</p>
-  <p><strong>Observed Human Maturogram:</strong> {{ result.Observed.ohm }}</p>
-  <hr>
-  <p><strong>Predicted Lustrum:</strong> {{ result.Predicted.a_phm }}</p>
-  <p><strong>Predicted Decade:</strong> {{ result.Predicted.b_phm }}</p>
-  <p><strong>Predicted Generation:</strong> {{ result.Predicted.c_phm }}</p>
-  <p><strong>Predicted Life Stage:</strong> {{ result.Predicted.d_phm }}</p>
-  <p><strong>Predicted Human Maturogram:</strong> {{ result.Predicted.phm }}</p>
-  <hr>
-  <p><strong>Percentage Human Maturogram:</strong> {{ result.percentage_hm }}%</p>
-  <p><strong>Maturity Zone:</strong> <span class="badge bg-primary">{{ result.zone }}</span></p>
+
+  <p class="fw-bold {{ zone_class }}">
+    INTERPRETIVE NOTE:
+  </p>
+
+  {% if result.zone == "Violet Zone (Cosmetic Maturity)" %}
+    <p class="{{ zone_class }}">
+      Individuals at this zone demonstrate extraordinary philosophical or intuitive
+      insight that transcends personal, cultural, and temporal boundaries. They
+      function as universal exemplars—tapping into cosmic consciousness and
+      symbolizing the evolution of human potential toward planetary or
+      cosmological wisdom.
+    </p>
+
+  {% elif result.zone == "Red Zone (Formative Maturity)" %}
+    <p class="{{ zone_class }}">
+      Individuals in this zone are undergoing foundational development of body,
+      emotion, intellect, and interpersonal skills. Identity is forming but not
+      yet fully autonomous.
+    </p>
+
+  {% elif result.zone == "Blue Zone (Transcendent Maturity)" %}
+    <p class="{{ zone_class }}">
+      This is a rare maturity zone marked by deep wisdom, inner peace, legacy
+      consciousness, and often intuitive or philosophical insight appropriate
+      for one’s age.
+    </p>
+
+  {% elif result.zone == "Green Zone (Fulfilled Maturity)" %}
+    <p class="{{ zone_class }}">
+      Individuals at this zone demonstrate reflective integration of life
+      experiences, mentoring of others, ethical leadership, and transgenerational
+      thinking.
+    </p>
+
+  {% elif result.zone == "Yellow Zone (Functional Maturity)" %}
+    <p class="{{ zone_class }}">
+      This is a capability-driven zone characterized by self-regulation, social
+      responsibility, career productivity, and an evolving sense of life purpose.
+    </p>
+  {% endif %}
 </div>
