@@ -466,8 +466,11 @@ checklist_items = [
 
 # ------------------ ROUTES ------------------
 
-@main.route("/")
+@main.route("/", methods=['GET', 'POST'])
 def index():
+    if request.method == "POST":
+        data = request.form
+        return render_template("result_snippet.html", data=data)
     return render_template("index.html", focus_texts=focus_texts, checklist_items=checklist_items)
 
 # Simple admin credentials
@@ -648,6 +651,25 @@ def result_page():
         return redirect(url_for('index'))
 
     return render_template('result_page.html', result=result, socio=socio)
+
+
+# Helper function to convert age to age range
+def get_age_range(age):
+    """Convert numeric age to age range string (e.g., '0-4', '5-9', etc.)"""
+    if age is None:
+        return "Unknown"
+    try:
+        age_int = int(age)
+    except (ValueError, TypeError):
+        return "Unknown"
+    
+    if age_int < 0:
+        return "Unknown"
+    
+    lustrum_index = age_int // 5
+    start = lustrum_index * 5
+    end = start + 4
+    return f"{start}-{end}"
 
 
 # Build a column mapping for all columns (defined once at module level)
@@ -988,7 +1010,15 @@ def admin():
             # Ensure a cache identifier exists for each row (used for delete operations)
             if "__cached_at" not in df.columns:
                 df["__cached_at"] = df.apply(lambda r: f"legacy_{r.get('id','')}_{datetime.datetime.utcnow().timestamp()}", axis=1)
-            df_display = df.rename(columns=DT_COLUMNS)
+            
+            # Add Age Range column and insert it as the first column
+            df_display = df.copy()
+            df_display["Age Range"] = df["age"].apply(get_age_range)
+            
+            # Reorder columns: Age Range first, then all DT_COLUMNS
+            cols_to_display = ["Age Range"] + list(DT_COLUMNS.keys())
+            df_display = df_display[cols_to_display].rename(columns=DT_COLUMNS)
+            
             # Add Actions column with Delete button (HTML); escape=False below allows HTML.
             df_display["Actions"] = df["__cached_at"].apply(lambda ts: f"<button class='btn btn-sm btn-danger delete-row' data-cached-at=\"{ts}\">Delete</button>")
             table_html = df_display.to_html(classes="table table-striped table-bordered", index=False, escape=False)

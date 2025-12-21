@@ -53,7 +53,7 @@
     <!-- Hide the form until consent is given -->
     <div id="form-wrapper" style="display:none;">
 
-      <form id="maturography-form" method="POST">
+      <form id="maturography-form" method="POST" action="/submit">
 
         <!-- PAGE 1 -->
         <div class="form-page" id="page-1">
@@ -164,154 +164,155 @@
           </div>
         </div>
 
-        {% set lustra_groups = [(0,4),(4,8),(8,12),(12,16),(16,20),(20,24)] %}
-        {% for grp in lustra_groups %}
-        <div class="form-page" id="page-{{ loop.index + 1 }}" style="display:none;">
-          {% for l in range(grp[0], grp[1]) %}
-          <div class="checklist-form mb-4 p-3 border rounded bg-white">
-            <h4 class="text-primary text-center mb-3">Lustral Map Checklist (L{{ l+1 }})</h4>
-            <div class="table-responsive">
-              <table class="table table-bordered align-middle">
-                <thead class="table-primary text-center">
-                  <tr>
-                    <th>Focus</th>
-                    <th>Checklist for Identification</th>
-                    <th>0</th>
-                    <th>1</th>
-                    <th>2</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for q in range(6) %}
-                  <tr>
-                    {% if q == 0 %}
-                    <td rowspan="6" class="text-center align-middle">{{ focus_texts[l] }}</td>
-                    {% endif %}
-                    <td>{{ checklist_items[l*6 + q] }}</td>
-                    <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="0" required></td>
-                    <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="1"></td>
-                    <td><input type="radio" name="l{{ l+1 }}_q{{ q+1 }}" value="2"></td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {% endfor %}
+        <div class="form-page" id="page-2" style="display:none;">
 
-          <div class="text-center mt-3">
-            {% if loop.index > 1 %}
-            <button type="button" class="btn btn-secondary px-5 me-3" onclick="prevPage()">Previous</button>
-            {% endif %}
-            {% if not loop.last %}
-            <button type="button" class="btn btn-primary px-5" onclick="nextPage()">Next</button>
-            {% else %}
-            <button type="button" class="btn btn-success px-5" onclick="submitAll()">Submit</button>
-            {% endif %}
+        {% for l in range(24) %}
+        <div class="checklist-form mb-4 p-3 border rounded bg-white"
+            data-lindex="{{ l }}"
+            style="display:none;">
+
+          <h4 class="text-primary text-center mb-3">
+            Lustral Map Checklist (L{{ l + 1 }})
+          </h4>
+
+          <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+              <thead class="table-primary text-center">
+                <tr>
+                  <th>Age Range</th>
+                  <th>Focus</th>
+                  <th>Checklist for Identification</th>
+                  <th>0</th>
+                  <th>1</th>
+                  <th>2</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for q in range(6) %}
+                <tr>
+                  {% if q == 0 %}
+                  <td rowspan="6" class="text-center align-middle fw-bold">
+                    {{ (l * 5 + 1) }} – {{ (l + 1) * 5 }} years
+                  </td>
+                  <td rowspan="6" class="text-center align-middle">
+                    {{ focus_texts[l] }}
+                  </td>
+                  {% endif %}
+
+                  <td>{{ checklist_items[l * 6 + q] }}</td>
+
+                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="0"></td>
+                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="1"></td>
+                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="2"></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
+
         </div>
         {% endfor %}
-        <div class="text-center mt-4 mb-3 form-footer">
-        <small class="text-muted">Form built by <strong>Abraham Joseph Damilare</strong></small>
+
+        <!-- ✅ Buttons MUST be OUTSIDE the loop -->
+        <div class="text-center mt-3">
+          <button type="button"
+                  class="btn btn-secondary px-5 me-3"
+                  onclick="prevPage()">Previous</button>
+
+          <button type="button"
+                  class="btn btn-success px-5"
+                  onclick="submitAll()">Submit</button>
+        </div>
+
       </div>
 
-
       </form>
-
     </div>
 
-    <div id="result-container" class="mt-4"></div>
-
-    <div class="zoom-controls">
-      <button type="button" onclick="zoomContent(1.2)">➕</button>
-      <button type="button" onclick="zoomContent(0.8)">➖</button>
-      <button type="button" onclick="resetZoom()">Reset</button>
-    </div>
-    
-  </div>
 
   <script>
-    const form = document.getElementById('maturography-form');
-    const contentWrapper = document.querySelector('.scale-wrapper');
-    let scale = 1;
+  const form = document.getElementById('maturography-form');
 
-    function submitAll() {
-      const btn = document.querySelector("button[onclick='submitAll()']");
-      btn.disabled = true;
-      const formData = new FormData(form);
+  function agreeToConsent() {
+    document.getElementById("consent-section").style.display = "none";
+    document.getElementById("form-wrapper").style.display = "block";
+    showPage(1);
+  }
 
-      fetch("/submit", { method: "POST", body: formData })
-        .then(res => res.text())
-        .then(html => {
-          document.getElementById("result-container").innerHTML = html;
-          window.scrollTo({ top: document.getElementById("result-container").offsetTop, behavior: "smooth" });
-        })
-        .catch(err => console.error(err))
-        .finally(() => btn.disabled = false);
-    }
+  function showPage(page) {
+    document.querySelectorAll('.form-page').forEach(p => p.style.display = 'none');
+    document.getElementById(`page-${page}`).style.display = 'block';
+  }
 
-    // Zoom functions
-    function zoomContent(factor) {
-      scale *= factor;
-      contentWrapper.style.transform = `scale(${scale})`;
-      contentWrapper.style.transformOrigin = 'top left';
-    }
+  /* ---------------- PAGE NAVIGATION ---------------- */
 
-    function resetZoom() {
-      scale = 1;
-      contentWrapper.style.transform = 'scale(1)';
-    }
-    function agreeToConsent() {
-      document.getElementById("consent-section").style.display = "none";
-      document.getElementById("form-wrapper").style.display = "block";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-    let currentPage = 1;
+  function nextPage() {
 
-    function showPage(n) {
-      document.querySelectorAll('.form-page').forEach(p => p.style.display = 'none');
-      document.getElementById(`page-${n}`).style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function nextPage() {
-      const pages = document.querySelectorAll('.form-page');
-
-      // Check required fields only on the first page (socio-demography)
-      if (currentPage === 1) {
-        const firstPageFields = pages[0].querySelectorAll('input[required], select[required]');
-        let allFilled = true;
-
-        firstPageFields.forEach(field => {
-          if (!field.value) {
-            allFilled = false;
-            field.classList.add('is-invalid'); // highlight empty field
-          } else {
-            field.classList.remove('is-invalid');
-          }
-        });
-
-        if (!allFilled) {
-          alert("Please fill out all required fields before proceeding.");
-          return; // stop moving to next page
-        }
-      }
-
-      if (currentPage < pages.length) {
-        currentPage++;
-        showPage(currentPage);
+    // Validate page 1
+    const requiredFields = document.querySelectorAll('#page-1 [required]');
+    for (let field of requiredFields) {
+      if (!field.value) {
+        alert('Please fill all required fields.');
+        return;
       }
     }
 
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        showPage(currentPage);
-      }
+    const age = parseInt(document.getElementById('age').value);
+    if (isNaN(age)) {
+      alert('Invalid age');
+      return;
     }
 
-    
+    filterLustrumsByAge(age);
+    showPage(2);
+  }
 
+  function prevPage() {
+    showPage(1);
+  }
+
+  /* ---------------- AGE → LUSTRUM LOGIC ---------------- */
+
+  function filterLustrumsByAge(age) {
+
+    let a_phm = Math.ceil(age / 5); // 1–24
+    let visible;
+
+    if (a_phm < 3) {
+      visible = [1, 2, 3, 4];
+    } else if (a_phm < 23) {
+      visible = [a_phm - 2, a_phm - 1, a_phm, a_phm + 1];
+    } else {
+      visible = [21, 22, 23, 24];
+    }
+
+    document.querySelectorAll('.checklist-form').forEach(form => {
+      const lIndex = parseInt(form.dataset.lindex) + 1;
+      const show = visible.includes(lIndex);
+
+      form.style.display = show ? 'block' : 'none';
+
+      // Enable only visible radios
+      form.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.disabled = !show;
+        radio.required = show;
+      });
+    });
+  }
+
+  /* ---------------- SUBMIT ---------------- */
+
+  function submitAll() {
+    form.submit();
+  }
+
+  /* ---------------- INIT ---------------- */
+
+  document.addEventListener('DOMContentLoaded', () => {
+    showPage(1);
+  });
   </script>
+
 </body>
 </html>
