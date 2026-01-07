@@ -166,69 +166,135 @@
 
         <div class="form-page" id="page-2" style="display:none;">
 
-        {% for l in range(24) %}
-        <div class="checklist-form mb-4 p-3 border rounded bg-white"
-            data-lindex="{{ l }}"
-            style="display:none;">
+          {% for l in range(24) %}
+          <div class="checklist-form mb-4 p-3 border rounded bg-white"
+              data-lindex="{{ l }}"
+              style="display:none;">
 
-          <h4 class="text-primary text-center mb-3">
-            Lustral Map Checklist (L{{ l + 1 }})
-          </h4>
+            <h4 class="text-primary text-center mb-3">
+              Lustral Map Checklist (L{{ l + 1 }})
+            </h4>
 
-          <div class="table-responsive">
-            <table class="table table-bordered align-middle">
-              <thead class="table-primary text-center">
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-primary text-center">
+                  <tr>
+                    <th>Age Range</th>
+                    <th>Focus</th>
+                    <th>Checklist for Identification</th>
+                    <th>0</th>
+                    <th>1</th>
+                    <th>2</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for q in range(6) %}
+                  <tr>
+                    {% if q == 0 %}
+                    <td rowspan="6" class="text-center align-middle fw-bold">
+                      {{ (l * 5 + 1) }} – {{ (l + 1) * 5 }} years
+                    </td>
+                    <td rowspan="6" class="text-center align-middle">
+                      {{ focus_texts[l] }}
+                    </td>
+                    {% endif %}
+
+                    <td>{{ checklist_items[l * 6 + q] }}</td>
+
+                    <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="0"></td>
+                    <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="1"></td>
+                    <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="2"></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+          {% endfor %}
+          <div class="text-center mt-3">
+            <button type="button"class="btn btn-secondary px-5 me-3" onclick="prevPage()">Previous</button>
+            <button type="button" class="btn btn-primary px-5" onclick="nextToBFI()">Next</button>
+          </div>
+        </div> 
+        <!-- PAGE 3: BFI-10 -->
+        <div class="form-page" id="page-3" style="display:none;">
+
+          <fieldset class="border p-3 mb-3">
+            <legend class="fw-bold px-2">
+              Big Five Personality Inventory (BFI-10)
+            </legend>
+
+            <p class="mb-2">
+              <strong>Instructions:</strong> How well do the following statements describe your personality?
+            </p>
+
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle text-center">
+                <thead class="table-primary">
+                  <tr>
+                    <th style="text-align:left;">I see myself as someone who…</th>
+                    <th><small>Strongly disagree</small></th>
+                    <th><small>Disagree</small></th>
+                    <th><small>Neutral</small></th>
+                    <th><small>Agree</small></th>
+                    <th><small>Strongly agree</small></th>
+                  </tr>
+                </thead>
+                <tbody>
+
+                {% set bfi_items = [
+                  "is reserved",
+                  "is generally trusting",
+                  "tends to be lazy",
+                  "is relaxed, handles stress well",
+                  "has few artistic interests",
+                  "is outgoing, sociable",
+                  "tends to find fault with others",
+                  "does a thorough job",
+                  "gets nervous easily",
+                  "has an active imagination"
+                ] %}
+
+                {% for i in range(10) %}
                 <tr>
-                  <th>Age Range</th>
-                  <th>Focus</th>
-                  <th>Checklist for Identification</th>
-                  <th>0</th>
-                  <th>1</th>
-                  <th>2</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {% for q in range(6) %}
-                <tr>
-                  {% if q == 0 %}
-                  <td rowspan="6" class="text-center align-middle fw-bold">
-                    {{ (l * 5 + 1) }} – {{ (l + 1) * 5 }} years
+                  <td style="text-align:left;">
+                    {{ i+1 }}. … {{ bfi_items[i] }}
                   </td>
-                  <td rowspan="6" class="text-center align-middle">
-                    {{ focus_texts[l] }}
+                  {% for v in range(1,6) %}
+                  <td>
+                    <input type="radio"
+                          name="bfi_{{ i+1 }}"
+                          value="{{ v }}"
+                          required>
                   </td>
-                  {% endif %}
-
-                  <td>{{ checklist_items[l * 6 + q] }}</td>
-
-                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="0"></td>
-                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="1"></td>
-                  <td><input type="radio" name="l{{ l + 1 }}_q{{ q + 1 }}" value="2"></td>
+                  {% endfor %}
                 </tr>
                 {% endfor %}
-              </tbody>
-            </table>
+
+                </tbody>
+              </table>
+            </div>
+          </fieldset>
+          <div class="text-center mt-3">
+            <button type="button"
+                    class="btn btn-secondary px-5 me-3"
+                    onclick="showPage(2)">
+              Previous
+            </button>
+
+            <button type="submit"
+                    class="btn btn-success px-5">
+              Submit
+            </button>
           </div>
 
-        </div>
-        {% endfor %}
-
-        <!-- ✅ Buttons MUST be OUTSIDE the loop -->
-        <div class="text-center mt-3">
-          <button type="button"
-                  class="btn btn-secondary px-5 me-3"
-                  onclick="prevPage()">Previous</button>
-
-          <button type="button"
-                  class="btn btn-success px-5"
-                  onclick="submitAll()">Submit</button>
-        </div>
+        </div> 
 
       </div>
-
-      </form>
-    </div>
+    </form>
+  </div>
 
 
   <script>
@@ -271,7 +337,9 @@
   function prevPage() {
     showPage(1);
   }
-
+  function nextToBFI() {
+  showPage(3);
+}
   /* ---------------- AGE → LUSTRUM LOGIC ---------------- */
 
   function filterLustrumsByAge(age) {
@@ -286,7 +354,7 @@
     } else {
       visible = [21, 22, 23, 24];
     }
-
+    
     document.querySelectorAll('.checklist-form').forEach(form => {
       const lIndex = parseInt(form.dataset.lindex) + 1;
       const show = visible.includes(lIndex);
@@ -312,6 +380,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     showPage(1);
   });
+  document.querySelectorAll('.form-page').forEach(p => p.style.display = 'none');
+  /* document.getElementById(`page-3`).style.display = 'block'; */
+
   </script>
 
 </body>

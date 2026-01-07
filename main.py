@@ -82,6 +82,16 @@ def init_local_db():
             gender TEXT,
             occupation TEXT,
             education TEXT,
+            bfi_1 INTEGER,
+            bfi_2 INTEGER, 
+            bfi_3 INTEGER,
+            bfi_4 INTEGER,
+            bfi_5 INTEGER,
+            bfi_6 INTEGER,
+            bfi_7 INTEGER,
+            bfi_8 INTEGER,
+            bfi_9 INTEGER,
+            bfi_10 INTEGER,
             fg_motor INTEGER, fg_language INTEGER, fg_interactions INTEGER, fg_emotional INTEGER,
             fg_curiosity INTEGER, fg_self_recognition INTEGER, fg_total INTEGER,
             sa_friendships INTEGER, sa_rules INTEGER, sa_empathy INTEGER, sa_self_regulation INTEGER,
@@ -194,6 +204,16 @@ def init_db():
             gender TEXT,
             occupation TEXT,
             education TEXT,
+            bfi_1 INTEGER,
+            bfi_2 INTEGER, 
+            bfi_3 INTEGER,
+            bfi_4 INTEGER,
+            bfi_5 INTEGER,
+            bfi_6 INTEGER,
+            bfi_7 INTEGER,
+            bfi_8 INTEGER,
+            bfi_9 INTEGER,
+            bfi_10 INTEGER,
             fg_motor INTEGER, fg_language INTEGER, fg_interactions INTEGER, fg_emotional INTEGER,
             fg_curiosity INTEGER, fg_self_recognition INTEGER, fg_total INTEGER,
             sa_friendships INTEGER, sa_rules INTEGER, sa_empathy INTEGER, sa_self_regulation INTEGER,
@@ -246,7 +266,8 @@ def init_db():
             observed_life_stage REAL, observed_human_maturogram REAL,
             predicted_lustrum REAL, predicted_decade REAL, predicted_generation REAL,
             predicted_life_stage REAL, predicted_human_maturogram REAL,
-            percentage_hm REAL, maturity_zone TEXT
+            percentage_hm REAL, maturity_zone TEXT,
+
         );
     ''')
 
@@ -256,6 +277,9 @@ def init_db():
     cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS gender TEXT;")
     cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS occupation TEXT;")
     cur.execute("ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS education TEXT;")
+    for i in range(1, 11):
+        cur.execute(f"ALTER TABLE human_maturography_records ADD COLUMN IF NOT EXISTS bfi_{i} INTEGER;")
+
 
     conn.commit()
     cur.close()
@@ -520,6 +544,11 @@ def submit():
         gender = request.form.get("gender", "").strip()
         occupation = request.form.get("occupation", "").strip()
         education = request.form.get("education", "").strip()
+        # Capture BFI responses (10 items)
+        bfi_values = [
+            int(request.form.get(f"bfi_{i}", 0))
+            for i in range(1, 11)
+        ]
 
         # Capture checklist responses (144 items)
         checklist_values = [
@@ -539,7 +568,7 @@ def submit():
         result = calc.calculate()
 
         # Prepare row data (age + sociodemographic fields)
-        insert_data = [age, marital_status, gender, occupation, education]
+        insert_data = [age,marital_status,gender,occupation,education,*bfi_values]
 
         # Append all checklist responses + grouped totals
         for i in range(24):
@@ -680,6 +709,16 @@ DT_COLUMNS = {
     "gender": "Gender",
     "occupation": "Occupation",
     "education": "Highest Education",
+    "bfi_1": "BFI: Is reserved",
+    "bfi_2": "BFI: Is generally trusting",
+    "bfi_3": "BFI: Tends to be lazy",
+    "bfi_4": "BFI: Is relaxed, handles stress well",
+    "bfi_5": "BFI: Has few artistic interests",
+    "bfi_6": "BFI: Is outgoing, sociable",
+    "bfi_7": "BFI: Tends to find fault with others",
+    "bfi_8": "BFI: Does a thorough job",
+    "bfi_9": "BFI: Gets nervous easily",
+    "bfi_10": "BFI: Has an active imagination",
     # Foundational Growth
     "fg_motor": "Foundational Growth: Demonstrates basic motor skills",
     "fg_language": "Foundational Growth: Acquires language fundamentals",
@@ -896,7 +935,11 @@ def get_all_columns():
     """Return the full ordered list of column names used in the INSERT and cache.
     Must match the column order used by the SQL INSERT statement above.
     """
-    cols = ["age", "marital_status", "gender", "occupation", "education"]
+    cols = ["age","marital_status","gender","occupation","education",]
+
+# 🔥 Add BFI columns
+    cols += [f"bfi_{i}" for i in range(1, 11)]
+
 
     cols += [
         *(f"fg_{col}" for col in ["motor","language","interactions","emotional","curiosity","self_recognition","total"]),
